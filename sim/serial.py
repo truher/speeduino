@@ -2,8 +2,8 @@
 #
 # Serial pins for simulavr
 #
+# Copyright (C) 2019  Joel Truher (Google LLC)
 # Copyright (C) 2015  Kevin O'Connor
-# Modified 2019 Joel Truher
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 
