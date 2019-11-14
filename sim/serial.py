@@ -41,7 +41,7 @@ class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
             self.queue += chr((self.current >> 1) & 0xff)
             self.pos = -1
             self.current = 0
-            return -1
+            return -1  # this means "don't call anymore"
         return self.delay
 
     def popChars(self):
@@ -65,7 +65,7 @@ class SerialTxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
     def DoStep(self, trueHwStep):
         if not self.pos:
             if not self.queue:
-                return -1
+                return -1  # this means "don't call anymore"
             self.current = (ord(self.queue[0]) << 1) | 0x200
             self.queue = self.queue[1:]
         newstate = 'L'

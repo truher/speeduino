@@ -9,6 +9,7 @@
 
 import sys, os, pty, select, fcntl, termios
 import pysimulavr
+import binascii
 
 class Pipe(pysimulavr.PySimulationMember):
     def __init__(self, port, speed, rxpin, txpin):
@@ -41,13 +42,16 @@ class Pipe(pysimulavr.PySimulationMember):
         # pipe "rx" is avr "tx"
         d = self.rxpin.popChars()
         if d:
-            sys.stdout.write(d)
-            sys.stdout.flush()
+            #sys.stdout.write(d)
+            #sys.stdout.flush()
             os.write(self.fd, d)
 
         # pipe "tx" is avr "rx"
         res = select.select([self.fd], [], [], 0)
         if res[0]:
             d = os.read(self.fd, 1024)
+            sys.stdout.write(binascii.hexlify(d))
+            sys.stdout.write(' ')
+            sys.stdout.flush()
             self.txpin.pushChars(d)
         return self.delay
