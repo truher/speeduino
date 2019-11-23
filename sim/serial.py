@@ -7,9 +7,43 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 
-import pysimulavr
+import pysimulavr, sys
 
 SERIALBITS = 10 # 8N1 = 1 start, 8 data, 1 stop
+
+# Class to read serial data from AVR serial transmit pin.
+class DebugSerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
+    def __init__(self, baud):
+        pysimulavr.Pin.__init__(self)
+        pysimulavr.PySimulationMember.__init__(self)
+        self.sc = pysimulavr.SystemClock.Instance()
+        self.delay = 10**9 / baud   # ns to wait?
+        self.current = 0
+        self.pos = -1
+
+    # overrides Pin.SetInState()
+    def SetInState(self, pin):
+        pysimulavr.Pin.SetInState(self, pin)
+        self.state = pin.outState
+        if self.pos < 0 and pin.outState == pin.LOW:
+            self.pos = 0
+            self.sc.Add(self)
+
+    # overrides PySimulationMember.DoStep()
+    def DoStep(self, trueHwStep):
+        ishigh = self.state == self.HIGH
+        self.current |= ishigh << self.pos
+        self.pos += 1
+        if self.pos == 1:
+            return int(self.delay * 1.5)
+        if self.pos >= SERIALBITS:
+            newChar = chr((self.current >> 1) & 0xff)
+            sys.stderr.write(newChar)
+            sys.stderr.flush()
+            self.pos = -1
+            self.current = 0
+            return -1  # this means "don't call anymore"
+        return self.delay
 
 # Class to read serial data from AVR serial transmit pin.
 class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):

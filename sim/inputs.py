@@ -6,7 +6,7 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 
-import pysimulavr
+import pysimulavr, random
 
 class InputPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
     def __init__(self):
@@ -15,4 +15,10 @@ class InputPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         self.SetPin('a')  # ?
 
     def DoStep(self, trueHwStep):
-        return 10**9
+        cur = self.GetAnalogValue(5.0)
+        cur += 0.1 * random.random() - 0.05
+        #print(cur)
+        # random walk
+        self.SetAnalogValue(cur)
+        return 1000
+        #return 10**9
