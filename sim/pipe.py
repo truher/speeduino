@@ -42,8 +42,8 @@ class Pipe(pysimulavr.PySimulationMember):
         # pipe "rx" is avr "tx"
         d = self.rxpin.popChars()
         if d:
-            #sys.stdout.write(d)
-            #sys.stdout.flush()
+            sys.stdout.write(d)
+            sys.stdout.flush()
             os.write(self.fd, d)
 
         # pipe "tx" is avr "rx"
