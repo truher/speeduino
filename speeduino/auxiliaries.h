@@ -58,8 +58,10 @@ volatile unsigned int vvt_pwm_cur_value;
 long vvt_pwm_value;
 long vvt_pid_target_angle;
 //long vvt_pid_current_angle;
+#if !defined(CORE_AVR)
 static inline void boostInterrupt();
 static inline void vvtInterrupt();
+#endif
 
 
 #endif

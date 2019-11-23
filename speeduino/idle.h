@@ -61,6 +61,8 @@ static inline void enableIdle();
 static inline byte isStepperHomed();
 static inline byte checkForStepping();
 static inline void doStep();
+#if !defined(CORE_AVR)
 static inline void idleInterrupt();
+#endif
 
 #endif
