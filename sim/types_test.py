@@ -56,7 +56,7 @@ class TypesTest(unittest.TestCase):
     def testDwarf(self):
         mem = dwarf.DictMemory()
         variables = dwarf.Globals(mem,
-            '.pio/build/megaatmega2560/firmware.elf',
+            'test/types.elf',
             'src/types.ino.cpp')
 
         self.checkPrimitive(variables, 'v1', 2, 1, 645, True) # bool => bool
@@ -117,7 +117,7 @@ class TypesTest(unittest.TestCase):
         sc = pysimulavr.SystemClock.Instance()
         pysimulavr.DumpManager.Instance().SetSingleDeviceApp()
         dev = pysimulavr.AvrFactory.instance().makeDevice("atmega2560")
-        dev.Load('.pio/build/megaatmega2560/firmware.elf')
+        dev.Load('test/types.elf')
         dev.SetClockFreq(10**9 / 16000000)
         sc.Add(dev)
         self.assertEqual(645, dev.data.GetAddressAtSymbol("v1"))

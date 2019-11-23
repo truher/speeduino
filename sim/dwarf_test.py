@@ -7,13 +7,13 @@ class TestDwarf(unittest.TestCase):
 
     def test_nonexistent_global(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         with self.assertRaises(ValueError):
             variables.variable('no_such_variable')
 
     def test_struct_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # struct config4
         configPage4 = variables.variable('configPage4')
         self.assertEqual("Struct", configPage4.__class__.__name__)
@@ -41,7 +41,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_const_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # const byte
         dsv = variables.variable('data_structure_version')
         # (in this particular elf file)
@@ -61,7 +61,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_byte_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # byte
         fpt = variables.variable('fpPrimeTime')
         self.assertEqual("0x1df2d", hex(fpt.var_die.offset)) # (in this particular elf file)
@@ -78,7 +78,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_uint16_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # byte
         mlc = variables.variable('mainLoopCount')
         self.assertEqual("0x1df41", hex(mlc.var_die.offset)) # (in this particular elf file)
@@ -95,7 +95,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_uint16_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # byte
         rt = variables.variable('revolutionTime')
         self.assertEqual("0x1df55", hex(rt.var_die.offset)) # (in this particular elf file)
@@ -112,7 +112,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_bool_primitive(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # byte
         rt = variables.variable('clutchTrigger')
         self.assertEqual("0x1dfa5", hex(rt.var_die.offset)) # (in this particular elf file)
@@ -129,7 +129,7 @@ class TestDwarf(unittest.TestCase):
 
     def test_array(self):
         mem = dwarf.DictMemory()
-        variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+        variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
         # uint16_t[12]
         nps = variables.variable('npage_size')
         self.assertEqual("Array", nps.__class__.__name__)
@@ -148,7 +148,7 @@ class TestDwarf(unittest.TestCase):
     #
     #def test_struct_array(self):
     #    mem = dwarf.DictMemory()
-    #    variables = dwarf.Globals(mem, 'test/firmware.elf', 'speeduino/speeduino.ino.cpp')
+    #    variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
     #    # struct table3D
     #    ft = variables.variable('fuelTable')
     #    self.assertEqual("Struct", ft.__class__.__name__)
