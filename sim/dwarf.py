@@ -7,6 +7,7 @@ from elftools.dwarf.descriptions import (describe_attr_value, describe_DWARF_exp
 from elftools.dwarf.locationlists import (LocationEntry, LocationExpr, LocationParser)
 from elftools.dwarf.dwarf_expr import (GenericExprVisitor, DW_OP_opcode2name)
 import struct
+import binascii
 
 # represents the memory of the device
 class Memory():
@@ -313,8 +314,7 @@ class Primitive(Variable):
         if self.var_die.tag == 'DW_TAG_variable':
             type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
             if type_die.tag == 'DW_TAG_array_type':   # don't count location twice
-                # TODO: hm, alloc seems to go down.  is that always true?
-                return parent_location -  self.index * self.byte_size()
+                return parent_location + self.index * self.byte_size()
             return parent_location + self.dwarf.getLocation(self.var_die) + self.index * self.byte_size()
         elif self.var_die.tag == 'DW_TAG_member':
             opval = OpVal(self.var_die.cu.structs, 'DW_OP_plus_uconst')
@@ -443,7 +443,7 @@ class Dwarf:
                     continue
                 if 'DW_AT_name' in die.attributes and die.attributes['DW_AT_name'].value == name:
                     return die
-        return None
+        raise ValueError("couldn't find compilation unit %s" % name)
 
     # get variable die by name
     def getVarDie(self, cu_die, name):
@@ -452,4 +452,5 @@ class Dwarf:
                 continue
             if 'DW_AT_name' in die.attributes and die.attributes['DW_AT_name'].value == name:
                 return die
-        return None
+        raise ValueError("couldn't find variable die %s" % name)
+

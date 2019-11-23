@@ -15,20 +15,21 @@ unsigned int v12;
 unsigned long v13;
 word v14;
 
-bool av1[2];
-boolean av2[2];
-byte av3[2];
-char av4[2];
-double av5[2];
-float av6[2];
-int av7[2];
-long av8[2];
-short av9[2];
-size_t av10[2];
-unsigned char av11[2];
-unsigned int av12[2];
-unsigned long av13[2];
-word av14[2];
+bool av1[2] = {false, true};
+boolean av2[2] = {true, false};
+byte av3[2] = {'\x01','\x02'};
+char av4[2] = {'\x09','\x08'};
+double av5[2] = {1.4, 1.5};
+float av6[2] = {1.2, 1.3};
+int av7[2] = {9, 8};
+// gcc seems not to be allocating enough space for this
+long av8[2] = {100000,100000};
+short av9[2] = {2, 4};
+size_t av10[2] = {3, 2};
+unsigned char av11[2] = {'\x04','\x08'};
+unsigned int av12[2] = {4,1};
+unsigned long av13[2] = {9,8};
+word av14[2] = {9, 7};
 
 struct s1 {
   bool  s1v1;
@@ -45,6 +46,22 @@ struct s1 {
   unsigned int  s1v12;
   unsigned long  s1v13;
   word s1v14;
+
+  // these are the allowed types in c; c++ allows more
+  // https://en.cppreference.com/w/c/language/bit_field
+  unsigned int s1v15 : 4;
+  signed int s1v16 : 4;
+  int s1v17 : 4;
+  bool s1v18 : 1;
+  // speeduino uses "byte" in source
+  byte s1v19 : 4;
+  // also there are nameless fields for padding
+  int s1v20 : 2;
+  int       : 2;  // pad 2 bits
+  int s1v21 : 2;
+  int       : 0;  // pad to boundary
+  int s1v22 : 2;
+  // TODO: handle byte straddling
 };
 struct s1 sv1;
 
@@ -52,7 +69,7 @@ int *vv0;
 char *vv1;
 
 void setup() {
-
+  // everything needs to be referenced or it won't have alloc
   v1 = true;
   v2 = true;
   v3 = '\x10';
@@ -113,6 +130,15 @@ void setup() {
   sv1.s1v13 = 7;
   sv1.s1v14 = 8;
 
+  sv1.s1v15 = 15;
+  sv1.s1v16 = -4;
+  sv1.s1v17 = -3;
+  sv1.s1v18 = true;
+  sv1.s1v19 = '\x03';
+  sv1.s1v20 = 3;
+  sv1.s1v21 = 3;
+  sv1.s1v22 = 3;
+
   vv0 = (int *)malloc(2 * sizeof(int));
   *vv0 = 34;
   *(vv0+1) = 56;
@@ -123,5 +149,5 @@ void setup() {
 }
 
 void loop() {
-  exit(0);
+  //exit(0);
 }
