@@ -47,21 +47,19 @@ struct s1 {
   unsigned long  s1v13;
   word s1v14;
 
-  // these are the allowed types in c; c++ allows more
-  // https://en.cppreference.com/w/c/language/bit_field
-  unsigned int s1v15 : 4;
-  signed int s1v16 : 4;
-  int s1v17 : 4;
-  bool s1v18 : 1;
-  // speeduino uses "byte" in source
-  byte s1v19 : 4;
-  // also there are nameless fields for padding
-  int s1v20 : 2;
-  int       : 2;  // pad 2 bits
-  int s1v21 : 2;
-  int       : 0;  // pad to boundary
-  int s1v22 : 2;
-  // TODO: handle byte straddling
+  // the general case is pretty confusing.  also i think the DWARF output is wrong
+  // see http://dwarfstd.org/ShowIssue.php?issue=081130.1
+  // the only thing we actually do is "byte", with no padding, and without byte straddling.
+  // so just do that.
+  // TODO: handle padding, byte straddling, wider types, etc.
+  byte s1v15 : 4; // 31
+  byte s1v16 : 4; // 31
+  byte s1v17 : 4; // 32
+  byte s1v18 : 1; // 32
+  byte s1v19 : 3; // 32
+  byte s1v20 : 2; // 33
+  byte s1v21 : 2; // 33
+  byte s1v22 : 2; // 33
 };
 struct s1 sv1;
 
@@ -131,13 +129,13 @@ void setup() {
   sv1.s1v14 = 8;
 
   sv1.s1v15 = 15;
-  sv1.s1v16 = -4;
-  sv1.s1v17 = -3;
-  sv1.s1v18 = true;
-  sv1.s1v19 = '\x03';
+  sv1.s1v16 = 4;
+  sv1.s1v17 = 3;
+  sv1.s1v18 = 1;
+  sv1.s1v19 = 3;
   sv1.s1v20 = 3;
-  sv1.s1v21 = 3;
-  sv1.s1v22 = 3;
+  sv1.s1v21 = 2;
+  sv1.s1v22 = 2;
 
   vv0 = (int *)malloc(2 * sizeof(int));
   *vv0 = 34;

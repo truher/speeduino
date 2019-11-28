@@ -11,9 +11,9 @@ import binascii
 
 # represents the memory of the device
 class Memory():
-    def get(self,addr):  # unsigned char
+    def get(self,addr):      # int
         raise NotImplementedError()
-    def set(self,addr,val):  # unsigned char
+    def set(self,addr,val):  # int
         raise NotImplementedError()
 
 # internal python, for testing and maybe page flipping?
@@ -22,11 +22,13 @@ class Memory():
 class DictMemory(Memory):
     def __init__(self):
         self.rw = {}
-    def get(self, addr):      # unsigned char
+    def get(self, addr):      # int
         if addr not in self.rw:
-            return b'\x00'    # good enough type?
+            return 0
         return self.rw[addr]
-    def set(self, addr, val): # unsigned char
+    def set(self, addr, val): # int
+        if not isinstance(val, int):
+            raise ValueError("wrong value type: %s " % type(val))
         self.rw[addr] = val
 
 # this visitor thing is how you get at the decoder
@@ -138,8 +140,15 @@ class Array(Variable):
         return parent_location + self.dwarf.getLocation(self.var_die)
 
 class Primitive(Variable):
+    @staticmethod
+    def mask(byte_size, bit_size, bit_offset):
+        if byte_size > 1:
+            raise ValueError("multi-byte masks are not supported")
+        binstr = '0b' + '0' *  bit_offset + '1' * bit_size + '0' * (8 - bit_offset - bit_size)
+        binint = int(binstr , 2)
+        return binint
+        
     def read(self):
-        memval = None
         if 'DW_AT_const_value' in self.var_die.attributes:
             return self.var_die.attributes['DW_AT_const_value'].value
         encoding = self.encoding()
@@ -148,66 +157,58 @@ class Primitive(Variable):
         # see https://docs.python.org/2.7/library/struct.html
         # see http://dwarfstd.org/doc/DWARF4.pdf
 
+        location = self.location()
         if encoding == 2 and byte_size == 1:  # DW bool => py bool
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-            return struct.unpack('?', memval)[0]
+            memval = self.memory.get(location)
+            return struct.unpack('?', '%s' % chr(memval))[0]
 
         if encoding == 4 and byte_size == 4: # float (also double, maybe because atmega?) => float
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-                memval1 = self.memory.get(location+1)
-                memval2 = self.memory.get(location+2)
-                memval3 = self.memory.get(location+3)
-            return struct.unpack('f', '%s%s%s%s' % (memval, memval1, memval2, memval3))[0]  
+            memval = self.memory.get(location)
+            memval1 = self.memory.get(location+1)
+            memval2 = self.memory.get(location+2)
+            memval3 = self.memory.get(location+3)
+            return struct.unpack('f', '%s%s%s%s' % (chr(memval), chr(memval1), chr(memval2), chr(memval3)))[0]  
 
         if encoding == 5 and byte_size == 2: # signed int (16)
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-                memval1 = self.memory.get(location+1)
+            memval = self.memory.get(location)
+            memval1 = self.memory.get(location+1)
             # python unsigned short == dwarf unsigned int
-            return struct.unpack('h', '%s%s' % (memval, memval1))[0]  
+            return struct.unpack('h', '%s%s' % (chr(memval), chr(memval1)))[0]  
 
         if encoding == 5 and byte_size == 4: # signed int (32)
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-                memval1 = self.memory.get(location+1)
-                memval2 = self.memory.get(location+2)
-                memval3 = self.memory.get(location+3)
-            return struct.unpack('i', '%s%s%s%s' % (memval, memval1, memval2, memval3))[0]  
+            memval = self.memory.get(location)
+            memval1 = self.memory.get(location+1)
+            memval2 = self.memory.get(location+2)
+            memval3 = self.memory.get(location+3)
+            return struct.unpack('i', '%s%s%s%s' % (chr(memval), chr(memval1), chr(memval2), chr(memval3)))[0]  
 
         if encoding == 6 and byte_size == 1:  # DW signed char => int
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-            return struct.unpack('b', memval)[0]
+            memval = self.memory.get(location)
+            return struct.unpack('b', '%s' % chr(memval))[0]
 
         if encoding == 7 and byte_size == 2: # unsigned int (16)
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-                memval1 = self.memory.get(location+1)
+            memval = self.memory.get(location)
+            memval1 = self.memory.get(location+1)
             # python unsigned short == dwarf unsigned int
-            return struct.unpack('H', '%s%s' % (memval, memval1))[0]  
+            return struct.unpack('H', '%s%s' % (chr(memval), chr(memval1)))[0]  
 
         if encoding == 7 and byte_size == 4: # unsigned int (32)
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-                memval1 = self.memory.get(location+1)
-                memval2 = self.memory.get(location+2)
-                memval3 = self.memory.get(location+3)
-            return struct.unpack('I', '%s%s%s%s' % (memval, memval1, memval2, memval3))[0]  
+            memval = self.memory.get(location)
+            memval1 = self.memory.get(location+1)
+            memval2 = self.memory.get(location+2)
+            memval3 = self.memory.get(location+3)
+            return struct.unpack('I', '%s%s%s%s' % (chr(memval), chr(memval1), chr(memval2), chr(memval3)))[0]  
 
         if encoding == 8 and byte_size == 1:  # DW unsigned char => int
-            if memval is None:
-                location = self.location()
-                memval = self.memory.get(location)
-            return struct.unpack('B', memval)[0]
+            memval = self.memory.get(location)
+            bit_size = self.bit_size()
+            bit_offset = self.bit_offset()
+            if bit_size is not None and bit_offset is not None:
+                # TOOD: this is a tiny part of the bit field possibilities, do the rest.
+                memval &= Primitive.mask(byte_size, bit_size, bit_offset)
+                shift = 8 - bit_size - bit_offset
+                memval = memval >> shift
+            return struct.unpack('B', '%s' % chr(memval))[0]
 
         raise ValueError("unknown encoding %d or byte_size %d" % (encoding, byte_size))
 
@@ -222,14 +223,14 @@ class Primitive(Variable):
                 raise ValueError("value out of bounds")
             memval = struct.pack('?', value)
             location = self.location()
-            self.memory.set(location, memval)
+            self.memory.set(location, bytearray(memval)[0])
             return
 
         if encoding == 4 and byte_size == 4:  # float (also double, maybe because atmega?) => float
             memval = struct.pack('f', value)
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location+i, x)
             return
 
         if encoding == 5 and byte_size == 2: # signed int 16
@@ -240,7 +241,7 @@ class Primitive(Variable):
             memval = struct.pack('h', value)
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location + i, x)
             return
 
         if encoding == 5 and byte_size == 4: # signed int 32
@@ -251,7 +252,7 @@ class Primitive(Variable):
             memval = struct.pack('i', value)
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location + i, x)
             return
 
         if encoding == 6 and byte_size == 1:  # DW signed char => int
@@ -262,7 +263,7 @@ class Primitive(Variable):
             memval = struct.pack('b', value)
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location + i, x)
             return
 
         if encoding == 7 and byte_size == 2: # unsigned int
@@ -273,7 +274,7 @@ class Primitive(Variable):
             memval = struct.pack('H', value)  # python unsigned short == dwarf unsigned int
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location + i, x)
             return
 
         if encoding == 7 and byte_size == 4: # unsigned long
@@ -284,7 +285,7 @@ class Primitive(Variable):
             memval = struct.pack('I', value)
             location = self.location()
             for i,x in enumerate(bytearray(memval)):
-                self.memory.set(location+i,chr(x))
+                self.memory.set(location + i, x)
             return
 
         if encoding == 8 and byte_size == 1:  # unsigned char
@@ -293,7 +294,22 @@ class Primitive(Variable):
             if value < 0 or value > 255:
                 raise ValueError("value out of bounds")
             memval = struct.pack('B', value)
+            memval = bytearray(memval)[0]
             location = self.location()
+
+            byte_size = self.byte_size()
+            bit_size = self.bit_size()
+            bit_offset = self.bit_offset()
+            if bit_size is not None and bit_offset is not None:
+                # only want part of it
+                # TOOD: this is a tiny part of the bit field possibilities, do the rest.
+                shift = 8 - bit_size - bit_offset
+                memval = memval << shift
+                mask = Primitive.mask(byte_size, bit_size, bit_offset)
+                memval &= mask
+                oldval = self.memory.get(location)
+                oldval &= ~mask
+                memval |= oldval
             self.memory.set(location, memval)
             return
 
@@ -316,7 +332,7 @@ class Primitive(Variable):
             if type_die.tag == 'DW_TAG_array_type':   # don't count location twice
                 return parent_location + self.index * self.byte_size()
             return parent_location + self.dwarf.getLocation(self.var_die) + self.index * self.byte_size()
-        elif self.var_die.tag == 'DW_TAG_member':
+        if self.var_die.tag == 'DW_TAG_member':
             opval = OpVal(self.var_die.cu.structs, 'DW_OP_plus_uconst')
             member_location_value = self.var_die.attributes['DW_AT_data_member_location'].value
             opval.process_expr(member_location_value)
@@ -324,13 +340,39 @@ class Primitive(Variable):
             return parent_location + member_location
         raise ValueError("bad tag %s" % self.var_die.tag)
 
+    # ignores the 'byte_size' included in fields with bit width, it looks like it's always the same
+    # as the attribute of the 'type'
     def byte_size(self):
+        #if self.var_die.tag == 'DW_TAG_member':
+        #    if 'DW_AT_byte_size' not in self.var_die.attributes:
+        #        raise ValueError("missing attr %s" % self.var_die)
+        #    return self.var_die.attributes['DW_AT_byte_size'].value
         type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
         if type_die.tag == 'DW_TAG_array_type':
             # the 'real' type is underneath
             type_die = self.dwarf.resolveTypeRef(self.var_die.cu.get_top_DIE(), type_die)
         byte_size = type_die.attributes['DW_AT_byte_size'].value
         return byte_size
+
+    def bit_size(self):
+        if self.var_die.tag != 'DW_TAG_member':
+            return None
+        if 'DW_AT_bit_size' not in self.var_die.attributes:
+            return None
+        return self.var_die.attributes['DW_AT_bit_size'].value
+        #type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
+        #bit_size = type_die.attributes['DW_AT_bit_size'].value
+        #return byte_size
+
+    def bit_offset(self):
+        if self.var_die.tag != 'DW_TAG_member':
+            return None
+        if 'DW_AT_bit_offset' not in self.var_die.attributes:
+            return None
+        return self.var_die.attributes['DW_AT_bit_offset'].value
+        #type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
+        #bit_offset = type_die.attributes['DW_AT_bit_offset'].value
+        #return byte_size
 
 class Dwarf:
     def __init__(self, filename):

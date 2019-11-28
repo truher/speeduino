@@ -26,13 +26,13 @@ class TestDwarf(unittest.TestCase):
         self.assertEqual(3846, triggerAngle.location())               # (in this particular elf file)
         self.assertEqual(0, triggerAngle.read(), 'default should be 0')
         triggerAngle.write(1)
-        self.assertDictEqual({3846:'\x01', 3847:'\x00'}, mem.rw)
+        self.assertDictEqual({3846:1, 3847:0}, mem.rw)
         self.assertEqual(1, triggerAngle.read())
         triggerAngle.write(32767)  # it's int16
-        self.assertDictEqual({3846:'\xff', 3847:'\x7f'}, mem.rw)
+        self.assertDictEqual({3846:255, 3847:127}, mem.rw)
         self.assertEqual(32767, triggerAngle.read())
         triggerAngle.write(-32768)  # it's int16
-        self.assertDictEqual({3846:'\x00', 3847:'\x80'}, mem.rw)
+        self.assertDictEqual({3846:0, 3847:128}, mem.rw)
         self.assertEqual(-32768, triggerAngle.read())
         with self.assertRaises(Exception):
             triggerAngle.write(123456)  # because it's too wide
@@ -71,7 +71,7 @@ class TestDwarf(unittest.TestCase):
         self.assertEqual(4975, fpt.location())               # (in this particular elf file)
         self.assertEqual(0, fpt.read())                      # zero is default
         fpt.write(1)
-        self.assertDictEqual({4975:'\x01'}, mem.rw)
+        self.assertDictEqual({4975:1}, mem.rw)
         self.assertEqual(1, fpt.read())
         with self.assertRaises(Exception):
             fpt.write("this should not work")                # because it's too long
@@ -105,7 +105,7 @@ class TestDwarf(unittest.TestCase):
         self.assertEqual(4969, rt.location())               # (in this particular elf file)
         self.assertEqual(0, rt.read())                      # zero is default
         rt.write(1)
-        self.assertDictEqual({4969:'\x01', 4970:'\x00', 4971:'\x00', 4972:'\x00'}, mem.rw)
+        self.assertDictEqual({4969:1, 4970:0, 4971:0, 4972:0}, mem.rw)
         self.assertEqual(1, rt.read())
         with self.assertRaises(Exception):
             rt.write(42949672950)                                # because it's too big
@@ -122,7 +122,7 @@ class TestDwarf(unittest.TestCase):
         self.assertEqual(4962, rt.location())               # (in this particular elf file)
         self.assertEqual(0, rt.read())                      # zero is default
         rt.write(1)
-        self.assertDictEqual({4962:'\x01'}, mem.rw)
+        self.assertDictEqual({4962:1}, mem.rw)
         self.assertEqual(1, rt.read())
         with self.assertRaises(Exception):
             rt.write(3)                                # because it's too big
@@ -140,7 +140,7 @@ class TestDwarf(unittest.TestCase):
         self.assertEqual(7, npsval.encoding())
         self.assertEqual(0, npsval.read()) # default
         npsval.write(1)
-        self.assertDictEqual({698:'\x01', 699:'\x00'}, mem.rw)
+        self.assertDictEqual({698:1, 699:0}, mem.rw)
         self.assertEqual(1, npsval.read())
 
 
