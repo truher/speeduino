@@ -100,7 +100,7 @@ class Struct(Variable):
         type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
         for member_die in type_die.iter_children():
             if member_die.tag != 'DW_TAG_member':
-                raise ValueError("wrong tag")
+                raise ValueError("wrong tag for name %s" % member_name)
             if member_name == member_die.attributes['DW_AT_name'].value:
                 return Primitive(self.memory, member_die, self, self.dwarf)
         raise ValueError("no member named %s % member_name")
@@ -111,6 +111,8 @@ class Struct(Variable):
         for member_die in type_die.iter_children():
             if 'DW_AT_name' not in member_die.attributes:
                 raise ValueError("no member name")
+            if member_die.tag != 'DW_TAG_member':
+                continue
             result.append(member_die.attributes['DW_AT_name'].value)
         return result
 
@@ -301,7 +303,9 @@ class Primitive(Variable):
             bit_size = self.bit_size()
             bit_offset = self.bit_offset()
             if bit_size is not None and bit_offset is not None:
-                # only want part of it
+                max_value = (1 << bit_size) - 1
+                if value > max_value:
+                    raise ValueError("value %d out of bounds %d" % (value, max_value))
                 # TOOD: this is a tiny part of the bit field possibilities, do the rest.
                 shift = 8 - bit_size - bit_offset
                 memval = memval << shift
