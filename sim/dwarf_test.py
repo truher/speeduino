@@ -14,7 +14,6 @@ class TestDwarf(unittest.TestCase):
     def test_struct_primitive(self):
         mem = dwarf.DictMemory()
         variables = dwarf.Globals(mem, 'test/speeduino.elf', 'speeduino/speeduino.ino.cpp')
-        # struct config4
         configPage4 = variables.variable('configPage4')
         self.assertEqual("Struct", configPage4.__class__.__name__)
         self.assertEqual("DW_TAG_variable", configPage4.var_die.tag)

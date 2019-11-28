@@ -15,16 +15,17 @@ from vr import CrankVrPin, CamVrPin
 from crank import Crank
 import pysimulavr
 import binascii
-#from ctypes import c_ubyte
 import dwarf
-from config4 import config4
 
 class SimMemory(dwarf.Memory):
     def __init__(self, dev):
         self.dev = dev
     def get(self, addr):
-        return chr(self.dev.getRWMem(addr))
+        val = self.dev.getRWMem(addr)
+        #print "get addr %d val %d" % (addr, val)
+        return val
     def set(self, addr, val):
+        #print "set addr %d val %d" % (addr, val)
         self.dev.setRWMem(addr, val)
 
 # this dumps the whole entire eeprom to the console, which verifies
@@ -39,10 +40,7 @@ def dumpEeprom(dev):
     #sys.stdout.write("eeprom: \n%s\n" % binascii.hexlify(b))
     for ost in range(709,837):
         test_str = chr(myEeprom.ReadFromAddress(ost))
-        sys.stdout.write("configPage4:%d: %s\n" % (ost, ''.join(format(ord(i), '08b') for i in test_str)))
-
-        
-
+        #sys.stdout.write("eeprom:%d: %s\n" % (ost, ''.join(format(ord(i), '08b') for i in test_str)))
 
 
 #def writeEeprom(dev):
@@ -52,9 +50,6 @@ def dumpEeprom(dev):
 #    myEeprom.WriteAtAddress(EEPROM_CONFIG4_START + 1, 0)
 #    myEeprom.WriteAtAddress(EEPROM_CONFIG4_START + 2, 22) # 00010110
 #    myEeprom.WriteAtAddress(EEPROM_CONFIG4_START + 3, 53) # 00110101
-#
-
-
 
 def printPins(dev):
     # pins, these don't change
@@ -71,14 +66,14 @@ def printPins(dev):
 def main():
     usage = "%prog [options] <program.elf>"
     opts = optparse.OptionParser(usage)
-    opts.add_option("-p", "--port", type="string", dest="port",
-                    default="/tmp/pseudoserial",
-                    help="pseudo-tty device to create for serial port")
+    #opts.add_option("-p", "--port", type="string", dest="port",
+    #                default="/tmp/pseudoserial",
+    #                help="pseudo-tty device to create for serial port")
     options, args = opts.parse_args()
     if len(args) != 1:
         opts.error("Incorrect number of arguments")
     filename = args[0]
-    ptyname = options.port
+    ptyname = '/tmp/pseudoserial' # options.port
     proc = "atmega2560"
     speed = 16000000
     # TODO(truher) the actual baud rate is 115200, but arduino uses the "double speed"
@@ -96,6 +91,11 @@ def main():
     dev.Load(filename)
     dev.SetClockFreq(10**9 / speed)
     sc.Add(dev)
+
+    mem = SimMemory(dev)
+
+    cu_name = 'speeduino/speeduino.ino.cpp'
+    variables = dwarf.Globals(mem, filename, cu_name)
 
     #os = pysimulavr.ostringstream()
     #pysimulavr.DumpManager.Instance().save(os)
@@ -283,14 +283,12 @@ def main():
     # wiring done
     # configure
 
-    cp2 = dev.data.GetAddressAtSymbol("configPage2")
-    cp4 = dev.data.GetAddressAtSymbol("configPage4")
     
-    #dev.SetRWMem(cp4+11, 0)
     # this doesn't work because it loads from EEPROM
     # so i need to stuff it into eeprom .. some parts of
     # the eprom are just copies of the config strucs though.
     EEPROM_CONFIG4_START = 709
+    EEPROM_CONFIG4_END =   837
     myEeprom = dev.eeprom
 #    dumpEeprom(dev)
 #    myEeprom.WriteAtAddress(EEPROM_CONFIG4_START + 0, 0) # configPage4.triggerAngle
@@ -316,7 +314,7 @@ def main():
 #    myEeprom.WriteAtAddress(EEPROM_CONFIG4_START + 3, 53) # 00110101
     sys.stdout.write("S0 new\n")
     # at this point the configPage4 struct is uninitialized
-    print("configPage2 %d" % dev.data.GetAddressAtSymbol("configPage2"))
+    #print("configPage2 %d" % dev.data.GetAddressAtSymbol("configPage2"))
     print("configPage4 %d" % dev.data.GetAddressAtSymbol("configPage4"))
     print("configPage6 %d" % dev.data.GetAddressAtSymbol("configPage6"))
     print("configPage9 %d" % dev.data.GetAddressAtSymbol("configPage9"))
@@ -328,49 +326,62 @@ def main():
     print("clutchTrigger %d" % dev.data.GetAddressAtSymbol("clutchTrigger"))
     print "=========================================="
 
-    mem = SimMemory(dev)
-    variables = dwarf.Globals(mem, filename, 'speeduino/speeduino.ino.cpp')
-    #cfgp4a = 
+    #mem = SimMemory(dev)
+    #variables = dwarf.Globals(mem, filename, 'speeduino/speeduino.ino.cpp')
+    configPage4 = variables.variable('configPage4')
+    currentStatus = variables.variable('currentStatus')
+    sys.stdout.write("NEW configPage4.triggerAngle: %d\n" % configPage4.member('triggerAngle').read())
+    sys.stdout.write("NEW configPage4.FixAng: %d\n" % configPage4.member('FixAng').read())
+    sys.stdout.write("NEW configPage4.CrankAng: %d\n" % configPage4.member('CrankAng').read())
+    sys.stdout.write("NEW configPage4.TrigAngMul: %d\n" % configPage4.member('TrigAngMul').read())
+    sys.stdout.write("NEW configPage4.TrigEdge: %d\n" % configPage4.member('TrigEdge').read())
 
-    cfgp4 = config4(filename, dev, "configPage4", EEPROM_CONFIG4_START)
-    sys.stdout.write("S0 read\n")
-    cfgp4.readFromStruct()
-    sys.stdout.write("S0 dump\n")
-    cfgp4.dumpToStdout()
-    sys.stdout.write("S0 set\n")
 
-    cfgp4.triggerAngle = 36
-    cfgp4.FixAng = 22
-    cfgp4.CrankAng = 53
-    cfgp4.TrigAngMul = 121
+    configPage4.member('triggerAngle').write(36)
+    configPage4.member('FixAng').write(22)
+    configPage4.member('CrankAng').write(53)
+    configPage4.member('TrigAngMul').write(121)
+    configPage4.member('TrigEdge').write(21)
 
     sys.stdout.write("S0 write\n")
-    cfgp4.writeToEeprom()
+    # write everything to eeprom
+    for x in range(EEPROM_CONFIG4_START, EEPROM_CONFIG4_END):
+        configPage4 = variables.variable('configPage4')
+        eeprom_relative = x - EEPROM_CONFIG4_START
+        var_relative = configPage4.location() + x - EEPROM_CONFIG4_START
+        val = mem.get(var_relative)
+        #print "addr %d val %d " % (x, val)
+        dev.eeprom.WriteAtAddress(x, val)
+
     sys.stdout.write("S0 dump\n")
-    cfgp4.dumpToStdout()
+    configPage4.member('triggerAngle').write(36)
+    configPage4.member('FixAng').write(22)
+    configPage4.member('CrankAng').write(53)
+    configPage4.member('TrigAngMul').write(121)
+    configPage4.member('TrigEdge').write(21)
     sys.stdout.write("S0 dump eeprom\n")
     dumpEeprom(dev)
     sys.stdout.write("S0 done\n")
     # Run forever
    # while 1:
     for cy in range(10):
+        sys.stdout.write("NEW currentStatus.hasSync: %d\n" % currentStatus.member('hasSync').read())
+        sys.stdout.write("NEW currentStatus.RPM: %d\n" % currentStatus.member('RPM').read())
         #d.cycle()  # Step() in avrdevice does this
         #sc.Endless()
         # struct has not been read from eeprom yet, so this shows uninitialized
-        cfgp4.readFromStruct()
-        cfgp4.dumpToStdout()
         sys.stdout.write("S1 run\n")
-        sc.RunTimeRange(speed*5)
+        sc.RunTimeRange(speed)
         sys.stdout.write("S1 done\n")
         sys.stdout.write("S2 dump\n")
-        # this should show the values from setup()
-        # should be 90, 28, 54
-        cfgp4.readFromStruct()
-        cfgp4.dumpToStdout()
-        # should show 01011010 (90)
-        dumpEeprom(dev)
+        sys.stdout.write("NEW1 configPage4.triggerAngle: %d\n" % configPage4.member('triggerAngle').read())
+        sys.stdout.write("NEW1 configPage4.FixAng: %d\n" % configPage4.member('FixAng').read())
+        sys.stdout.write("NEW1 configPage4.CrankAng: %d\n" % configPage4.member('CrankAng').read())
+        sys.stdout.write("NEW1 configPage4.TrigAngMul: %d\n" % configPage4.member('TrigAngMul').read())
+        sys.stdout.write("NEW1 configPage4.TrigEdge: %d\n" % configPage4.member('TrigEdge').read())
+
         sys.stdout.write("S2 done\n")
-        exit()
+        #exit()
         #sys.stdout.write("time %d\n" % sc.GetCurrentTime())
 
         # in 2560 it's uint8 byte
@@ -380,62 +391,60 @@ def main():
 
         # globals
 
-        #sys.stdout.write("ignitionOn: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("ignitionOn"))))
-        #sys.stdout.write("fuelOn: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("fuelOn"))))
-        #sys.stdout.write("mapErrorCount: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("mapErrorCount"))))
-        #sys.stdout.write("MAPcount: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("MAPcount"))))
-        #sys.stdout.write("MAPrunningValue: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("MAPrunningValue"))))
-        #sys.stdout.write("MAPlast: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("MAPlast"))))
-        #sys.stdout.write("revolutionTime: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("revolutionTime"))))
-        #sys.stdout.write("toothCurrentCount: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("toothCurrentCount"))))
-        #sys.stdout.write("toothOneTime: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("toothOneTime"))))
-        #sys.stdout.write("toothLastToothTime: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("toothLastToothTime"))))
-        #sys.stdout.write("toothOneMinusOneTime: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("toothOneMinusOneTime"))))
-        #sys.stdout.write("triggerToothAngleIsCorrect: %d\n" % (dev.getRWMem(dev.data.GetAddressAtSymbol("triggerToothAngleIsCorrect"))))
+        sys.stdout.write("ignitionOn: %d\n" % variables.variable('ignitionOn').read())
+        sys.stdout.write("fuelOn: %d\n" % variables.variable("fuelOn").read())
+        sys.stdout.write("mapErrorCount: %d\n" % variables.variable("mapErrorCount").read())
+        sys.stdout.write("MAPcount: %d\n" % variables.variable("MAPcount").read())
+        sys.stdout.write("MAPrunningValue: %d\n" % variables.variable("MAPrunningValue").read())
+        sys.stdout.write("MAPlast: %d\n" % variables.variable("MAPlast").read())
+        sys.stdout.write("revolutionTime: %d\n" % variables.variable("revolutionTime").read())
+        sys.stdout.write("toothCurrentCount: %d\n" % variables.variable("toothCurrentCount").read())
+        sys.stdout.write("toothOneTime: %d\n" % variables.variable("toothOneTime").read())
+        sys.stdout.write("toothLastToothTime: %d\n" % variables.variable("toothLastToothTime").read())
+        sys.stdout.write("toothOneMinusOneTime: %d\n" % variables.variable("toothOneMinusOneTime").read())
+        sys.stdout.write("triggerToothAngleIsCorrect: %d\n" % variables.variable("triggerToothAngleIsCorrect").read())
 
         # currentStatus
-        #cs = dev.data.GetAddressAtSymbol("currentStatus")
-        #sys.stdout.write("currentStatus.hasSync: %d\n" % dev.getRWMem(cs))
-        #sys.stdout.write("currentStatus.RPM: %d\n" % (dev.getRWMem(cs+1) + (dev.getRWMem(cs+2) << 8)))
-        #sys.stdout.write("currentStatus.longRPM: %d\n" % (dev.getRWMem(cs+3) + (dev.getRWMem(cs+4) << 8) + (dev.getRWMem(cs+5) << 16) + (dev.getRWMem(cs+6) << 24)))
-        #sys.stdout.write("currentStatus.mapADC: %d\n" % (dev.getRWMem(cs+7) + (dev.getRWMem(cs+8) << 8)))
-        #sys.stdout.write("currentStatus.baroADC: %d\n" % (dev.getRWMem(cs+9) + (dev.getRWMem(cs+8) << 10)))
-        #sys.stdout.write("currentStatus.MAP: %d\n" % (dev.getRWMem(cs+11) + (dev.getRWMem(cs+12) << 8) + (dev.getRWMem(cs+13) << 16) + (dev.getRWMem(cs+14) << 24)))
-        #sys.stdout.write("currentStatus.baro: %d\n" % dev.getRWMem(cs+19))
-        #sys.stdout.write("currentStatus.TPS: %d\n" % dev.getRWMem(cs+20))
-        #sys.stdout.write("currentStatus.tpsADC: %d\n" % dev.getRWMem(cs+21))
-        #sys.stdout.write("currentStatus.VE: %d\n" % dev.getRWMem(cs+26))
-        #sys.stdout.write("currentStatus.VE1: %d\n" % dev.getRWMem(cs+27))
-        #sys.stdout.write("currentStatus.tpsADC: %d\n" % dev.getRWMem(cs+21))
-        #sys.stdout.write("currentStatus.coolant: %d\n" % (dev.getRWMem(cs+31) + (dev.getRWMem(cs+32) << 8)))
-        #sys.stdout.write("currentStatus.cltADC: %d\n" % (dev.getRWMem(cs+33) + (dev.getRWMem(cs+34) << 8)))
-        #sys.stdout.write("currentStatus.iatADC: %d\n" % (dev.getRWMem(cs+37) + (dev.getRWMem(cs+38) << 8)))
-        #sys.stdout.write("currentStatus.batADC: %d\n" % (dev.getRWMem(cs+39) + (dev.getRWMem(cs+40) << 8)))
-        #sys.stdout.write("currentStatus.O2ADC: %d\n" % (dev.getRWMem(cs+43) + (dev.getRWMem(cs+44) << 8)))
-        #sys.stdout.write("currentStatus.egoCorrection: %d\n" % (dev.getRWMem(cs+53)))
+        sys.stdout.write("currentStatus.hasSync: %d\n" % currentStatus.member("hasSync").read())
+        sys.stdout.write("currentStatus.RPM: %d\n" % currentStatus.member("RPM").read())
+        sys.stdout.write("currentStatus.longRPM: %d\n" %currentStatus.member("longRPM").read())
+        sys.stdout.write("currentStatus.mapADC: %d\n" %currentStatus.member("mapADC").read())
+        sys.stdout.write("currentStatus.baroADC: %d\n" %currentStatus.member("baroADC").read())
+        sys.stdout.write("currentStatus.MAP: %d\n" %currentStatus.member("MAP").read())
+        sys.stdout.write("currentStatus.baro: %d\n" % currentStatus.member("baro").read())
+        sys.stdout.write("currentStatus.TPS: %d\n" % currentStatus.member("TPS").read())
+        sys.stdout.write("currentStatus.tpsADC: %d\n" % currentStatus.member("tpsADC").read())
+        sys.stdout.write("currentStatus.VE: %d\n" % currentStatus.member("VE").read())
+        sys.stdout.write("currentStatus.VE1: %d\n" % currentStatus.member("VE1").read())
+        sys.stdout.write("currentStatus.tpsADC: %d\n" % currentStatus.member("tpsADC").read())
+        sys.stdout.write("currentStatus.coolant: %d\n" % currentStatus.member("coolant").read())
+        sys.stdout.write("currentStatus.cltADC: %d\n" % currentStatus.member("cltADC").read())
+        sys.stdout.write("currentStatus.iatADC: %d\n" % currentStatus.member("iatADC").read())
+        sys.stdout.write("currentStatus.batADC: %d\n" % currentStatus.member("batADC").read())
+        sys.stdout.write("currentStatus.O2ADC: %d\n" % currentStatus.member("O2ADC").read())
+        sys.stdout.write("currentStatus.egoCorrection: %d\n" % currentStatus.member("egoCorrection").read())
         ## total runtime
-        #sys.stdout.write("currentStatus.runSecs: %d\n" % dev.getRWMem(cs+93))
+        sys.stdout.write("currentStatus.runSecs: %d\n" % currentStatus.member("runSecs").read())
 
         # configPage4
-        sys.stdout.write("configPage4.triggerAngle: %d\n" % (dev.getRWMem(cp4) + (dev.getRWMem(cp4+1)<<8)))
-        sys.stdout.write("configPage4.FixAng: %d\n" % (dev.getRWMem(cp4+4) ))
-        sys.stdout.write("configPage4.CrankAng: %d\n" % dev.getRWMem(cp4+5))
-        sys.stdout.write("configPage4.TrigAngMul: %d\n" % dev.getRWMem(cp4+6))
-        sys.stdout.write("configPage4.TrigEdge: %d\n" % (dev.getRWMem(cp4+7)  & (0b10000000)))
-        sys.stdout.write("configPage4.TrigSpeed: %d\n" % (dev.getRWMem(cp4+7) & (0b01000000)))
-        sys.stdout.write("configPage4.IgInv: %d\n" % (dev.getRWMem(cp4+7)     & (0b00100000)))
-        sys.stdout.write("configPage4.TrigPattern: %d\n" % (dev.getRWMem(cp4+7) & (0b00011111)))
-        #sys.stdout.write("configPage4.TrigPattern: %d\n" % dev.getRWMem(cp4+11))
-        #sys.stdout.write("configPage4.StgCycles: %d\n" % dev.getRWMem(cp4+21))
-        #sys.stdout.write("configPage4.sparkMode: %d\n" % dev.getRWMem(cp4+24))
-        #sys.stdout.write("configPage4.triggerFilter: %d\n" % dev.getRWMem(cp4+25))
-        #sys.stdout.write("configPage4.triggerTeeth: %d\n" % dev.getRWMem(cp4+29))
-        #sys.stdout.write("configPage4.triggerMissingTeeth: %d\n" % dev.getRWMem(cp4+30))
-        #sys.stdout.write("configPage4.crankRPM: %d\n" % dev.GetRWMem(cp4+31))
+        sys.stdout.write("NEW1 configPage4.triggerAngle: %d\n" % configPage4.member('triggerAngle').read())
+        sys.stdout.write("NEW1 configPage4.FixAng: %d\n" % configPage4.member('FixAng').read())
+        sys.stdout.write("NEW1 configPage4.CrankAng: %d\n" % configPage4.member('CrankAng').read())
+        sys.stdout.write("NEW1 configPage4.TrigAngMul: %d\n" % configPage4.member('TrigAngMul').read())
+        sys.stdout.write("NEW1 configPage4.TrigEdge: %d\n" % configPage4.member('TrigEdge').read())
+        sys.stdout.write("NEW1 configPage4.TrigSpeed: %d\n" % configPage4.member('TrigSpeed').read())
+        sys.stdout.write("NEW1 configPage4.IgInv: %d\n" % configPage4.member('IgInv').read())
+        sys.stdout.write("NEW1 configPage4.TrigPattern: %d\n" % configPage4.member('TrigPattern').read())
+        sys.stdout.write("NEW1 configPage4.StgCycles: %d\n" % configPage4.member('StgCycles').read())
+        sys.stdout.write("NEW1 configPage4.sparkMode: %d\n" % configPage4.member('sparkMode').read())
+        sys.stdout.write("NEW1 configPage4.triggerFilter: %d\n" % configPage4.member('triggerFilter').read())
+        sys.stdout.write("NEW1 configPage4.triggerTeeth: %d\n" % configPage4.member('triggerTeeth').read())
+        sys.stdout.write("NEW1 configPage4.triggerMissingTeeth: %d\n" % configPage4.member('triggerMissingTeeth').read())
+        sys.stdout.write("NEW1 configPage4.crankRPM: %d\n" % configPage4.member('crankRPM').read())
 
-        cp6 = dev.data.GetAddressAtSymbol("configPage6")
-        cp9 = dev.data.GetAddressAtSymbol("configPage9")
-        cp10 = dev.data.GetAddressAtSymbol("configPage10")
+        #cp6 = dev.data.GetAddressAtSymbol("configPage6")
+        #cp9 = dev.data.GetAddressAtSymbol("configPage9")
+        #cp10 = dev.data.GetAddressAtSymbol("configPage10")
 
 
 
@@ -452,11 +461,17 @@ def main():
         #sys.stdout.write("\n\n\n")
         #sys.stdout.write("DATA VERSION %d\n" % myEeprom.ReadFromAddress(0))
         #dumpEeprom(dev)
-        for ost in range(64):
-            cs = dev.data.GetAddressAtSymbol("configPage4")
-            #sys.stdout.write("configPage4:%d: %s\n" % (ost,hex(dev.getRWMem(cs+ost))))
-            test_str = chr(dev.getRWMem(cs+ost))
-            sys.stdout.write("configPage4:%d: %s\n" % (ost, ''.join(format(ord(i), '08b') for i in test_str)))
+
+#        for ost in range(64):
+#            cs = dev.data.GetAddressAtSymbol("configPage4")
+#            test_str = chr(dev.getRWMem(cs+ost))
+#            sys.stdout.write("configPage4:%d: %s\n" % (ost, ''.join(format(ord(i), '08b') for i in test_str)))
+
+        #for ost in range(64):
+        #    cs = dev.data.GetAddressAtSymbol("configPage4")
+        #    #sys.stdout.write("configPage4:%d: %s\n" % (ost,hex(dev.getRWMem(cs+ost))))
+        #    test_str = chr(dev.getRWMem(cs+ost))
+        #    sys.stdout.write("configPage4:%d: %s\n" % (ost, ''.join(format(ord(i), '08b') for i in test_str)))
         #for ost in range(150):
         #    cs = dev.data.GetAddressAtSymbol("currentStatus")
         #    sys.stdout.write("currentStatus:%d: %s\n" % (ost,hex(dev.getRWMem(cs+ost))))
