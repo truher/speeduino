@@ -24,12 +24,15 @@ class VrPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         posFloor = int(pos)
         self.state = self.states[posFloor]
         self.SetPin(self.state)
-        print "VR pin %s time %d degrees %d idx %d state %s" % (
-            self.name(), self.sc.GetCurrentTime(),
-            self.crank.currentAngleDegrees, posFloor, self.state)
+        self.printDebug(posFloor)
         remainingDegrees = (pos + 1 - posFloor) * 720 / len(self.states)
         remainingNs = remainingDegrees * self.crank.nsecPerDegree
         return int(remainingNs)
+
+    def printDebug(self, posFloor):
+        print "time %d VR pin %s degrees %d idx %d state %s" % (
+            self.sc.GetCurrentTime(), self.name(),
+            self.crank.currentAngleDegrees, posFloor, self.state)
 
 # Simulate a 36-1 sensor for crank
 class CrankVrPin(VrPin):

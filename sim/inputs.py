@@ -9,10 +9,12 @@
 import pysimulavr, random
 
 class InputPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
-    def __init__(self):
+    def __init__(self, sc, name):
         pysimulavr.Pin.__init__(self)
         pysimulavr.PySimulationMember.__init__(self)
         self.SetPin('a')  # ?
+        self.sc = sc
+        self.name = name
 
     def DoStep(self, trueHwStep):
         cur = self.GetAnalogValue(5.0)
@@ -20,5 +22,6 @@ class InputPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         #print(cur)
         # random walk
         self.SetAnalogValue(cur)
-        return 1000
+        print "time %d input %s input %f" % (self.sc.GetCurrentTime(), self.name, cur)
+        return 1000000  # 1 ms
         #return 10**9

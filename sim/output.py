@@ -9,11 +9,14 @@
 import pysimulavr
 
 class OutputPin(pysimulavr.Pin):
-    def __init__(self):
+    def __init__(self, sc, name):
         pysimulavr.Pin.__init__(self)
-        self.pos = -1
+        #self.pos = -1
+        self.name = name
+        self.sc = sc
 
     # overrides Pin.SetInState()
     def SetInState(self, pin):
         pysimulavr.Pin.SetInState(self, pin)
         self.state = pin.outState
+        print "time %d output %s state %s" % (self.sc.GetCurrentTime(), self.name, self.state)

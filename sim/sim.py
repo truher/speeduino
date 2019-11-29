@@ -57,7 +57,10 @@ def writeConfigToEeprom(variables, mem, dev):
 
 def printPins(variables):
     print "=============== PINS ==============="
-    vars = [ "pinTrigger", "pinTrigger2", "pinTPS", "pinMAP", "pinIAT",
+    vars = [ "pinTrigger",
+             "pinTrigger2",
+             "pinTPS",
+             "pinMAP", "pinIAT",
              "pinCLT", "pinO2", "pinBat"]
     for var in vars:
         printVarVal(variables, var)
@@ -65,6 +68,11 @@ def printPins(variables):
 def writeDefaults(variables):
     configPage2 = variables.variable('configPage2')
     configPage2.member('pinMapping').write(3)  # for the 0.4 shield.
+    configPage2.member('mapSample').write(0)  # instantaneous
+    configPage2.member('tpsMin').write(0)
+    configPage2.member('tpsMax').write(255)
+    configPage2.member('mapMin').write(0)
+    configPage2.member('mapMax').write(255)
     #configPage2.member('pinMapping').write(41)  # for the UA4C
     configPage2.member('injLayout').write(0)  # paired
     configPage4 = variables.variable('configPage4')
@@ -86,6 +94,14 @@ def writeDefaults(variables):
     configPage4.member('triggerTeeth').write(36)  # number of teeth (incl missing one)
     configPage4.member('triggerMissingTeeth').write(1)  # number of missing teeth
     configPage4.member('crankRPM').write(200)  # less than this is cranking
+    configPage4.member('batVoltCorrect').write(0)  # no correction
+    configPage4.member('ADCFILTER_TPS').write(128)
+    configPage4.member('ADCFILTER_CLT').write(180)
+    configPage4.member('ADCFILTER_IAT').write(180)
+    configPage4.member('ADCFILTER_O2').write(128)
+    configPage4.member('ADCFILTER_BAT').write(128)
+    configPage4.member('ADCFILTER_MAP').write(20)
+    configPage4.member('ADCFILTER_BARO').write(64)
 
 def writeZeros(variables):
     configPage4 = variables.variable('configPage4')
@@ -104,12 +120,34 @@ def writeZeros(variables):
 
 
 def printConfig(variables):
+    print "========================= CONFIG2 ========================="
+    configPage2 = variables.variable('configPage2')
+    vars = [
+            'reqFuel',
+            'multiplyMAP',
+            'injOpen',
+            'mapSample',
+            'tpsMin',
+            'tpsMax',
+            'mapMin',
+            'mapMax'
+            ]
+    for var in vars:
+        printMemberVal(configPage2, var)
     print "========================= CONFIG4 ========================="
     configPage4 = variables.variable('configPage4')
     vars = [ 'triggerAngle', 'FixAng', 'CrankAng', 'TrigAngMul', 'TrigEdge',
              'TrigSpeed', 'IgInv', 'TrigPattern', 'TrigEdgeSec', 'fuelPumpPin',
              'useResync', 'StgCycles', 'sparkMode', 'triggerFilter', 'triggerTeeth',
-             'triggerMissingTeeth', 'crankRPM' ]
+             'triggerMissingTeeth', 'crankRPM',
+             'ADCFILTER_TPS',
+             'ADCFILTER_CLT',
+             'ADCFILTER_IAT',
+             'ADCFILTER_O2',
+             'ADCFILTER_BAT',
+             'ADCFILTER_MAP',
+             'ADCFILTER_BARO',
+            ]
     for var in vars:
         printMemberVal(configPage4, var)
 
@@ -130,13 +168,21 @@ def printStatus(variables):
     currentStatus = variables.variable('currentStatus')
     vars = [
              "engine",  # bits
+             "status1", # bits
              "startRevolutions",
              "hasSync",
              "syncLossCounter",
-             "RPM", "longRPM", "mapADC", "baroADC", "MAP",
-             "baro", "TPS", "tpsADC", "VE", "VE1", "tpsADC", "coolant",
-             "cltADC", "iatADC", "batADC", "O2ADC", "egoCorrection",
+             "RPM", "longRPM", "mapADC", "baroADC",
+             "MAP",
+             "baro", 
+             "TPS", "tpsADC", "VE", "VE1", "O2",
+             "tpsADC",
+             "coolant",    # +40 deg
+             "cltADC", "iatADC", "batADC", "O2ADC",
+             "battery10",  # volts * 10, i.e. 125 is normal
+             "egoCorrection",
              "runSecs", "secl",
+             "loopsPerSecond",
              "freeRAM"
             ]
     for var in vars:
@@ -156,7 +202,11 @@ def printVars(variables):
              "validTrigger",
              "triggerFilterTime",
              "fpPrimeTime", "mainLoopCount", "revolutionTime", "clutchTrigger",
-             'ignitionOn', "fuelOn", "mapErrorCount", "MAPcount", "MAPrunningValue",
+             'ignitionOn', "fuelOn",
+             "mapErrorCount",
+             "iatErrorCount",
+             "cltErrorCount",
+             "MAPcount", "MAPrunningValue",
              "MAPlast", "toothCurrentCount",
              "triggerToothAngleIsCorrect",
              "jt_foo"
@@ -267,7 +317,7 @@ def main():
     netD18.Add(dev.GetPin("D3")) # pin 18 = PD3 = interrupt 5?  6?
 
     # i think tps is just linear, 0-5 = 0-90, but i'm not sure.
-    tps = InputPin()
+    tps = InputPin(sc, 'tps')
     tps.SetAnalogValue(0.1)
     sc.Add(tps)
     netA2 = pysimulavr.Net()
@@ -277,7 +327,7 @@ def main():
     # the map transfer function is.
     # Vout = 5.1 * (0.00369*P + 0.04)
     # https://www.mouser.com/datasheet/2/302/MPX4250-1127330.pdf
-    mapPin = InputPin()
+    mapPin = InputPin(sc, 'map')
     mapPin.SetAnalogValue(1.0)
     sc.Add(mapPin)
     netA3 = pysimulavr.Net()
@@ -288,7 +338,7 @@ def main():
 
     # iat is a resistance measurement with 2.49k bias.
     # don't want that, use 0.5v.  where's the calibration?
-    iat = InputPin()
+    iat = InputPin(sc, 'iat')
     iat.SetAnalogValue(1.0)
     sc.Add(iat)
     netA0 = pysimulavr.Net()
@@ -297,7 +347,7 @@ def main():
 
     # clt is a resistance measurement with 2.49k bias.
     # don't want that, use 0.5v.  where's the calibration?
-    clt = InputPin()
+    clt = InputPin(sc, 'clt')
     clt.SetAnalogValue(1.0)
     sc.Add(clt)
     netA1 = pysimulavr.Net()
@@ -306,7 +356,7 @@ def main():
 
     # AFR = (2.3750 * Volts) + 7.3125, so Volts = (AFR - 7.3125) / 2.3750
     # https://www.aemelectronics.com/files/instructions/30-0310%20X-Series%20Inline%20Wideband%20UEGO%20Sensor%20Controller.pdf
-    o2 = InputPin()
+    o2 = InputPin(sc, 'o2')
     o2.SetAnalogValue(2.5)
     sc.Add(o2)
     netA8 = pysimulavr.Net()
@@ -314,7 +364,7 @@ def main():
     netA8.Add(dev.GetPin("K0"))
 
     # 12v through 3.9/1 divider => 12.7v becomes 2.6v
-    bat = InputPin()
+    bat = InputPin(sc, 'bat')
     bat.SetAnalogValue(2.6)
     sc.Add(bat)
     netA4 = pysimulavr.Net()
@@ -325,61 +375,42 @@ def main():
     # outputs
     # do not need Stepping
 
-    inj1 =  OutputPin()
+    inj1 =  OutputPin(sc, 'inj1')
     netD8 = pysimulavr.Net()
     netD8.Add(inj1)
     netD8.Add(dev.GetPin("H5"))
-    inj2 =  OutputPin()
+    inj2 =  OutputPin(sc, 'inj2')
     netD9 = pysimulavr.Net()
     netD9.Add(inj2)
     netD9.Add(dev.GetPin("H6"))
-    inj3 =  OutputPin()
+    inj3 =  OutputPin(sc, 'inj3')
     netD10 = pysimulavr.Net()
     netD10.Add(inj3)
     netD10.Add(dev.GetPin("B4"))
-    inj4 =  OutputPin()
+    inj4 =  OutputPin(sc, 'inj4')
     netD11 = pysimulavr.Net()
     netD11.Add(inj4)
     netD11.Add(dev.GetPin("B5"))
 
-    ign1 =  OutputPin()
+    ign1 =  OutputPin(sc, 'ign1')
     netD40 = pysimulavr.Net()
     netD40.Add(ign1)
     netD40.Add(dev.GetPin("G1"))
-    ign2 =  OutputPin()
+    ign2 =  OutputPin(sc, 'ign2')
     netD38 = pysimulavr.Net()
     netD38.Add(ign2)
     netD38.Add(dev.GetPin("D7"))
-    ign3 =  OutputPin()
+    ign3 =  OutputPin(sc, 'ign3')
     netD52 = pysimulavr.Net()
     netD52.Add(ign3)
     netD52.Add(dev.GetPin("B1"))
-    ign4 =  OutputPin()
+    ign4 =  OutputPin(sc, 'ign4')
     netD50 = pysimulavr.Net()
     netD50.Add(ign4)
     netD50.Add(dev.GetPin("B3"))
 
     print "Starting AVR simulation: machine=%s speed=%d" % (proc, speed)
     print "Serial: port=%s baud=%d" % (ptyname, baud)
-
-    #dm = pysimulavr.DumpManager.Instance()
-    #d = pysimulavr.DumpVCD("out.vcd")
-    ##dumper.setActiveSignals
-    #sigs = ("+ PORTD.PIN\n"
-    #        "+ PORTE.PIN\n"
-    #        "+ PORTF.PIN\n"
-    #       )
-    ##vals = dm.all()
-    #dm.addDumper(d, dm.load(sigs))
-    #dm.start()
-
-    # wiring done
-    # configure
-    
-    # this doesn't work because it loads from EEPROM
-    # so i need to stuff it into eeprom .. some parts of
-    # the eprom are just copies of the config strucs though.
-
 
     configPage4 = variables.variable('configPage4')
     currentStatus = variables.variable('currentStatus')
@@ -421,7 +452,8 @@ def main():
         sc.RunTimeRange(speed)
         printDebugStream(rxpin2)
         print "time %d" % sc.GetCurrentTime()
-        print "crank angle: %d crank: %s cam: %s" % (crank.currentAngleDegrees, tach1.state, tach2.state)
+        print "crank angle: %d crank: %s cam: %s" % (
+            crank.currentAngleDegrees, tach1.state, tach2.state)
         printPins(variables)
         printStatus(variables)
         printVars(variables)
