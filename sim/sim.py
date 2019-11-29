@@ -63,18 +63,29 @@ def printPins(variables):
         printVarVal(variables, var)
 
 def writeDefaults(variables):
+    configPage2 = variables.variable('configPage2')
+    configPage2.member('pinMapping').write(3)  # for the 0.4 shield.
+    #configPage2.member('pinMapping').write(41)  # for the UA4C
+    configPage2.member('injLayout').write(0)  # paired
     configPage4 = variables.variable('configPage4')
     configPage4.member('triggerAngle').write(36)
     configPage4.member('FixAng').write(22)
     configPage4.member('CrankAng').write(53)
     configPage4.member('TrigAngMul').write(121)
-    configPage4.member('TrigEdge').write(1)
-    configPage4.member('TrigSpeed').write(1)
+    configPage4.member('TrigEdge').write(0)    # rising
+    configPage4.member('TrigSpeed').write(0)   # wheel on crank
     configPage4.member('IgInv').write(1)
-    configPage4.member('TrigPattern').write(1)
-    configPage4.member('TrigEdgeSec').write(1)
+    configPage4.member('TrigPattern').write(0) # missing tooth
+    configPage4.member('TrigEdgeSec').write(0) # secondary rising
     configPage4.member('fuelPumpPin').write(1)
     configPage4.member('useResync').write(1)
+    configPage4.member('StgCycles').write(0)   # ignition immediately
+    configPage4.member('sparkMode').write(0)   # wasted
+    configPage4.member('triggerFilter').write(0)   # no filter
+    configPage4.member('trigPatternSec').write(0) # secondary pattern (unimplemented)
+    configPage4.member('triggerTeeth').write(36)  # number of teeth (incl missing one)
+    configPage4.member('triggerMissingTeeth').write(1)  # number of missing teeth
+    configPage4.member('crankRPM').write(400)  # less than this is cranking
 
 def writeZeros(variables):
     configPage4 = variables.variable('configPage4')
@@ -103,10 +114,10 @@ def printConfig(variables):
         printMemberVal(configPage4, var)
 
 def printVarVal(variables, name):
-    print "%26s: %6d" % (name, variables.variable(name).read())
+    print "%26s: %8d" % (name, variables.variable(name).read())
 
 def printMemberVal(variable, name):
-    print "%26s: %6d" % (name, variable.member(name).read())
+    print "%26s: %8d" % (name, variable.member(name).read())
 
 def printFullStatus(variables):
     print "========================= FULL STATUS ========================="
@@ -117,22 +128,47 @@ def printFullStatus(variables):
 def printStatus(variables):
     print "========================= STATUS ========================="
     currentStatus = variables.variable('currentStatus')
-    vars = [ "hasSync", "RPM", "longRPM", "mapADC", "baroADC", "MAP",
+    vars = [
+             "engine",  # bits
+             "startRevolutions",
+             "hasSync",
+             "syncLossCounter",
+             "RPM", "longRPM", "mapADC", "baroADC", "MAP",
              "baro", "TPS", "tpsADC", "VE", "VE1", "tpsADC", "coolant",
              "cltADC", "iatADC", "batADC", "O2ADC", "egoCorrection",
-             "runSecs", "secl"]
+             "runSecs", "secl",
+             "freeRAM"
+            ]
     for var in vars:
         printMemberVal(currentStatus, var)
 
 def printVars(variables):
     print "========================= VARIABLES ========================="
-    vars = [ "fpPrimeTime", "mainLoopCount", "revolutionTime", "clutchTrigger",
+    vars = [ 
+             "currentLoopTime",   # start of the current loop
+             "previousLoopTime",  # start of the previous loop
+             "curGap",
+             "toothLastToothTime",
+             "toothLastMinusOneToothTime",
+             "toothOneTime",
+             "toothOneMinusOneTime",
+             "targetGap",
+             "validTrigger",
+             "triggerFilterTime",
+             "fpPrimeTime", "mainLoopCount", "revolutionTime", "clutchTrigger",
              'ignitionOn', "fuelOn", "mapErrorCount", "MAPcount", "MAPrunningValue",
-             "MAPlast", "toothCurrentCount", "toothOneTime", "toothLastToothTime",
-             "toothOneMinusOneTime", "triggerToothAngleIsCorrect"]
+             "MAPlast", "toothCurrentCount",
+             "triggerToothAngleIsCorrect",
+             "jt_foo"
+             ]
     # "triggerPri_pin_port" # TODO: implement pointers 
     for var in vars:
         printVarVal(variables, var)
+
+def printDebugStream(pin):
+    print "========================= DEBUG STREAM ========================="
+    print pin.GetBuffer()
+    pin.ClearBuffer()
 
 def main():
     usage = "%prog [options] <program.elf>"
@@ -218,17 +254,17 @@ def main():
 
     # inputs
 
-    tach1 = CrankVrPin(crank)
+    tach1 = CrankVrPin(crank, sc)
     sc.Add(tach1)
     netD19 = pysimulavr.Net()
     netD19.Add(tach1)
-    netD19.Add(dev.GetPin("D2"))
+    netD19.Add(dev.GetPin("D2")) # pin 19 = PD2 = interrupt 4?
 
-    tach2 = CamVrPin(crank)
+    tach2 = CamVrPin(crank, sc)
     sc.Add(tach2)
     netD18 = pysimulavr.Net()
-    netD19.Add(tach2)
-    netD19.Add(dev.GetPin("D3"))
+    netD18.Add(tach2)
+    netD18.Add(dev.GetPin("D3")) # pin 18 = PD3 = interrupt 5?  6?
 
     # i think tps is just linear, 0-5 = 0-90, but i'm not sure.
     tps = InputPin()
@@ -378,12 +414,15 @@ def main():
     printConfig(variables)
 
     printPins(variables)
+    printDebugStream(rxpin2)
 
-    for cy in range(10):
+    for cy in range(100):
         print "================================= RUN CYCLE %d =================================" % cy 
         sc.RunTimeRange(speed)
+        printDebugStream(rxpin2)
         print "time %d" % sc.GetCurrentTime()
         print "crank angle: %d crank: %s cam: %s" % (crank.currentAngleDegrees, tach1.state, tach2.state)
+        printPins(variables)
         printStatus(variables)
         printVars(variables)
         printConfig(variables)

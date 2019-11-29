@@ -1094,4 +1094,10 @@ static_assert(sizeof(struct config6) == 128, "configPage6 size is not 128");
 static_assert(sizeof(struct config9) == 192, "configPage9 size is not 192");
 static_assert(sizeof(struct config10) == 192, "configPage10 size is not 192");
 
+/*****************/
+/* for debugging */
+/*****************/
+
+volatile byte jt_foo;
+
 #endif // GLOBALS_H

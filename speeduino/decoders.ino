@@ -188,14 +188,18 @@ It takes an argument of the full (COMPLETE) number of teeth per revolution. For 
 static inline int crankingGetRPM(byte totalTeeth)
 {
   uint16_t tempRPM = 0;
+  //noInterrupts(); Serial2.println("===RPM Z"); interrupts();
   if( (currentStatus.startRevolutions >= configPage4.StgCycles) && (currentStatus.hasSync == true) )
   {
+    //noInterrupts(); Serial2.println("===RPM A"); interrupts();
     if( (toothLastToothTime > 0) && (toothLastMinusOneToothTime > 0) && (toothLastToothTime > toothLastMinusOneToothTime) )
     {
+      //noInterrupts(); Serial2.println("===RPM B"); interrupts();
       noInterrupts();
       revolutionTime = (toothLastToothTime - toothLastMinusOneToothTime) * totalTeeth;
       interrupts();
       tempRPM = (US_IN_MINUTE / revolutionTime);
+      //noInterrupts(); Serial2.print("===tempRPM: "); Serial2.println(tempRPM); interrupts();
       if( tempRPM >= MAX_RPM ) { tempRPM = currentStatus.RPM; } //Sanity check. This can prevent spiking caused by noise on individual teeth. The new RPM should never be above 4x the cranking setting value (Remembering that this function is only called is the current RPM is less than the cranking setting)
     }
   }
@@ -246,6 +250,7 @@ Note: This does not currently support dual wheel (ie missing tooth + single toot
 */
 void triggerSetup_missingTooth()
 {
+  //noInterrupts(); Serial2.println("===SETUP_MISSING_TOOTH"); interrupts();
   triggerToothAngle = 360 / configPage4.triggerTeeth; //The number of degrees that passes from tooth to tooth
   if(configPage4.TrigSpeed == CAM_SPEED) { triggerToothAngle = 720 / configPage4.triggerTeeth; } //Account for cam speed missing tooth
   triggerActualTeeth = configPage4.triggerTeeth - configPage4.triggerMissingTeeth; //The number of physical teeth on the wheel. Doing this here saves us a calculation each time in the interrupt
@@ -271,7 +276,12 @@ void triggerSetup_missingTooth()
 
 void triggerPri_missingTooth()
 {
+   //noInterrupts(); Serial2.println("===TRIGGERPRI"); interrupts();
+   //noInterrupts(); Serial2.print("===toothLastToothTime: "); Serial2.println(toothLastToothTime); interrupts();
+
    curTime = micros();
+   //noInterrupts(); Serial2.print("===curTime: "); Serial2.println(curTime); interrupts();
+   jt_foo += 1;  // total teeth?
    curGap = curTime - toothLastToothTime;
    if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
    {
@@ -356,6 +366,7 @@ void triggerPri_missingTooth()
       }
       else
       {
+        //noInterrupts(); Serial2.println("===NOT ENOUGH"); interrupts();
         //We fall here on initial startup when enough teeth have not yet been seen
         toothLastMinusOneToothTime = toothLastToothTime;
         toothLastToothTime = curTime;
@@ -424,11 +435,14 @@ void triggerSec_missingTooth()
 
 uint16_t getRPM_missingTooth()
 {
+  //noInterrupts(); Serial2.println("===GET RPM"); interrupts();
   uint16_t tempRPM = 0;
   if( currentStatus.RPM < currentStatus.crankRPM )
   {
+    //noInterrupts(); Serial2.println("===SLOW"); interrupts();
     if(toothCurrentCount != 1)
     {
+      //noInterrupts(); Serial2.println("===NOT 1"); interrupts();
       if(configPage4.TrigSpeed == CAM_SPEED) { tempRPM = crankingGetRPM(configPage4.triggerTeeth/2); } //Account for cam speed
       else { tempRPM = crankingGetRPM(configPage4.triggerTeeth); }
     }
@@ -436,6 +450,7 @@ uint16_t getRPM_missingTooth()
   }
   else
   {
+    //noInterrupts(); Serial2.println("===FAST"); interrupts();
     if(configPage4.TrigSpeed == CAM_SPEED) { tempRPM = stdGetRPM(720); } //Account for cam speed
     else { tempRPM = stdGetRPM(360); }
   }

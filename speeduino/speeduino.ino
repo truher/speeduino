@@ -89,13 +89,17 @@ void loop()
     unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
     if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the lastest time and doing the comparison
     {
+      //noInterrupts(); Serial2.println("===RUNNING"); interrupts();
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
       FUEL_PUMP_ON();
       currentStatus.fuelPumpOn = true; //Not sure if this is needed.
+      noInterrupts(); Serial2.print("===RPM:"); Serial2.println(currentStatus.RPM); interrupts();
+
     }
     else
     {
+      //noInterrupts(); Serial2.println("===STALLED"); interrupts();
       //We reach here if the time between teeth is too great. This VERY likely means the engine has stopped
       currentStatus.RPM = 0;
       currentStatus.PW1 = 0;

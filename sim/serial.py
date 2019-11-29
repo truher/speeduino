@@ -20,6 +20,7 @@ class DebugSerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         self.delay = 10**9 / baud   # ns to wait?
         self.current = 0
         self.pos = -1
+        self.buffer = ""
 
     # overrides Pin.SetInState()
     def SetInState(self, pin):
@@ -40,10 +41,17 @@ class DebugSerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
             newChar = chr((self.current >> 1) & 0xff)
             sys.stderr.write(newChar)
             sys.stderr.flush()
+            self.buffer += newChar
             self.pos = -1
             self.current = 0
             return -1  # this means "don't call anymore"
         return self.delay
+
+    def ClearBuffer(self):
+        self.buffer = ""
+
+    def GetBuffer(self):
+        return self.buffer
 
 # Class to read serial data from AVR serial transmit pin.
 class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):

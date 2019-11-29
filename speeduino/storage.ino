@@ -137,10 +137,10 @@ void writeConfig(byte tableNum)
 
     case ignSetPage:
       /*---------------------------------------------------
-      | Config page 2 (See storage.h for data layout)
+      | Config page 4 (See storage.h for data layout)
       | 64 byte long config table
       -----------------------------------------------------*/
-      pnt_configPage = (byte *)&configPage4; //Create a pointer to Page 2 in memory
+      pnt_configPage = (byte *)&configPage4; //Create a pointer to Page 4 in memory
       for(int x=EEPROM_CONFIG4_START; x<EEPROM_CONFIG4_END; x++)
       {
         if( (writeCounter > EEPROM_MAX_WRITE_BLOCK) ) { break; } //This is a safety check to make sure we don't attempt to write too much to the EEPROM at a time.
@@ -428,6 +428,7 @@ void writeConfig(byte tableNum)
 
 void loadConfig()
 {
+  //noInterrupts(); Serial2.print("ST0 hello"); interrupts();
   
   int offset;
   //Create a pointer to the config page
@@ -482,11 +483,15 @@ void loadConfig()
     ignitionTable.axisY[offset] = EEPROM.read(x) * TABLE_LOAD_MULTIPLIER; //Table load is divided by 2 (Allows for MAP up to 511)
   }
 
+  //noInterrupts(); Serial2.print("ST0 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX); interrupts();
+
   pnt_configPage = (byte *)&configPage4; //Create a pointer to Page 4 in memory
   for(int x=EEPROM_CONFIG4_START; x<EEPROM_CONFIG4_END; x++)
   {
     *(pnt_configPage + byte(x - EEPROM_CONFIG4_START)) = EEPROM.read(x);
   }
+
+  //noInterrupts(); Serial2.print("ST1 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX); interrupts();
 
   //*********************************************************************************************************************************************************************************
   //AFR TARGET CONFIG PAGE (3)

@@ -10,32 +10,31 @@ import pysimulavr, sys
 
 # Base class
 class VrPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
-    def __init__(self, crank):
+    def __init__(self, crank, sc):
         pysimulavr.Pin.__init__(self)
         pysimulavr.PySimulationMember.__init__(self)
         self.crank = crank
         self.states = "L"
         self.state = self.states[0]
+        self.sc = sc
 
     # overrides PySimulationMember.DoStep()
     def DoStep(self, trueHwStep):
         pos = len(self.states) * self.crank.currentAngleDegrees/720
-        #sys.stdout.write("pos %f\n" % pos)
         posFloor = int(pos)
-        #sys.stdout.write("posfloor %f\n" % posFloor)
         self.state = self.states[posFloor]
         self.SetPin(self.state)
+        print "VR pin %s time %d degrees %d idx %d state %s" % (
+            self.name(), self.sc.GetCurrentTime(),
+            self.crank.currentAngleDegrees, posFloor, self.state)
         remainingDegrees = (pos + 1 - posFloor) * 720 / len(self.states)
-        #sys.stdout.write("remainingDegrees %f\n" % remainingDegrees)
         remainingNs = remainingDegrees * self.crank.nsecPerDegree
-        #sys.stdout.write("remainingNs %f\n" % remainingNs)
-        #sys.stdout.flush()
         return int(remainingNs)
 
 # Simulate a 36-1 sensor for crank
 class CrankVrPin(VrPin):
-    def __init__(self, crank):
-        VrPin.__init__(self, crank)
+    def __init__(self, crank, sc):
+        VrPin.__init__(self, crank, sc)
         # 36-1, two revolutions
         #                1 2 3 4 5 6
         self.states = ("LHLHLHLHLHLH"
@@ -50,17 +49,16 @@ class CrankVrPin(VrPin):
                        "LHLHLHLHLHLH"
                        "LHLHLHLHLHLH"
                        "LHLHLHLHLHLL")
-#    def DoStep(self, trueHwStep):
-#        VrPin.__init__(self, trueHwStep)
+    def name(self):
+        return "crank"
 
     
 # Simulate a one-tooth sensor for cam
 class CamVrPin(VrPin):
-    def __init__(self, crank):
-        VrPin.__init__(self, crank)
+    def __init__(self, crank, sc):
+        VrPin.__init__(self, crank, sc)
         # one tooth out of 8 positions
         #                1 2 3 4 5 6 7 8
         self.states = ("LLLLLLLLLHLLLLLL")
-#    def DoStep(self, trueHwStep):
-#        VrPin.__init__(self, trueHwStep)
-
+    def name(self):
+        return "cam"
