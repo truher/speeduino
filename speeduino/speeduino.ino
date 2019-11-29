@@ -94,7 +94,7 @@ void loop()
       currentStatus.RPM = currentStatus.longRPM;
       FUEL_PUMP_ON();
       currentStatus.fuelPumpOn = true; //Not sure if this is needed.
-      //noInterrupts(); Serial2.print("===RPM:"); Serial2.println(currentStatus.RPM); interrupts();
+      //Serial2.print("===RPM:"); Serial2.println(currentStatus.RPM);
 
     }
     else
