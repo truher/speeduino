@@ -85,7 +85,7 @@ def writeDefaults(variables):
     configPage4.member('trigPatternSec').write(0) # secondary pattern (unimplemented)
     configPage4.member('triggerTeeth').write(36)  # number of teeth (incl missing one)
     configPage4.member('triggerMissingTeeth').write(1)  # number of missing teeth
-    configPage4.member('crankRPM').write(400)  # less than this is cranking
+    configPage4.member('crankRPM').write(200)  # less than this is cranking
 
 def writeZeros(variables):
     configPage4 = variables.variable('configPage4')
