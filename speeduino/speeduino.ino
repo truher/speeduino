@@ -46,6 +46,7 @@ void setup()
 
 void loop()
 {
+      jt_foo = analogRead(A2) >> 2;
       mainLoopCount++;
       LOOP_TIMER = TIMER_mask;
       //Check for any requets from serial. Serial operations are checked under 2 scenarios:

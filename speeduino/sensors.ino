@@ -321,14 +321,21 @@ static inline void readMAP()
 
 void readTPS()
 {
+  //Serial2.println("===readTPS");
+
   TPSlast = currentStatus.TPS;
   TPSlast_time = TPS_time;
   #if defined(ANALOG_ISR)
+    //Serial2.println("===ISR"); // no
     byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
   #else
+    //Serial2.println("===analogRead"); // yes it is
+    //Serial2.println(pinTPS);
     analogRead(pinTPS);
     byte tempTPS = fastMap1023toX(analogRead(pinTPS), 255); //Get the current raw TPS ADC value and map it into a byte
   #endif
+  //Serial2.println(analogRead(A2));
+  //Serial2.println(analogRead(pinTPS));
   currentStatus.tpsADC = ADC_FILTER(tempTPS, configPage4.ADCFILTER_TPS, currentStatus.tpsADC);
   //currentStatus.tpsADC = ADC_FILTER(tempTPS, 128, currentStatus.tpsADC);
   byte tempADC = currentStatus.tpsADC; //The tempADC value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted

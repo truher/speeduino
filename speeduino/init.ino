@@ -18,7 +18,7 @@
 
 void initialiseAll()
 {
-    //noInterrupts(); Serial2.print("IT0 hello"); interrupts();
+    //Serial2.print("IT0 hello");
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
@@ -34,13 +34,13 @@ void initialiseAll()
     table3D_setSize(&trim3Table, 6);
     table3D_setSize(&trim4Table, 6);
 
-    //noInterrupts(); Serial2.print("IT0 load start"); interrupts();
+    //Serial2.print("IT0 load start");
     loadConfig();
-    //noInterrupts(); Serial2.print("IT0 load done"); interrupts();
+    //Serial2.print("IT0 load done");
 
-    //noInterrupts(); Serial2.print("IT0 update start"); interrupts();
+    //Serial2.print("IT0 update start");
     doUpdates(); //Check if any data items need updating (Occurs with firmware updates)
-    //noInterrupts(); Serial2.print("IT0 update done"); interrupts();
+    //Serial2.print("IT0 update done");
 
 
     //configPage4.TrigPattern = 17;
@@ -59,7 +59,7 @@ void initialiseAll()
 
 
 
-    //noInterrupts(); Serial2.print("===IT0 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX); interrupts();
+    //Serial2.print("===IT0 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX);
     if (configPage9.enable_secondarySerial == 1) { CANSerial.begin(115200); }
 
     #if defined(CORE_STM32) || defined(CORE_TEENSY)
@@ -896,7 +896,7 @@ void initialiseAll()
     }
 
 
-  //noInterrupts(); Serial2.print("===IT1 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX); interrupts();
+  //Serial2.print("===IT1 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX);
     initialisationComplete = true;
     digitalWrite(LED_BUILTIN, HIGH);
 }
@@ -906,7 +906,7 @@ void setPinMapping(byte boardID)
   switch (boardID)
   {
     case 0:
-      //noInterrupts(); Serial2.println("===board id 0"); interrupts();
+      //Serial2.println("===board id 0");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the v0.1 shield
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -938,7 +938,7 @@ void setPinMapping(byte boardID)
     #endif
       break;
     case 1:
-      //noInterrupts(); Serial2.println("===board id 1"); interrupts();
+      //Serial2.println("===board id 1");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the v0.2 shield
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -972,7 +972,7 @@ void setPinMapping(byte boardID)
       break;
     #endif
     case 2:
-      //noInterrupts(); Serial2.println("===board id 2"); interrupts();
+      //Serial2.println("===board id 2");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the v0.3 shield
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -1023,7 +1023,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 3:
-      //noInterrupts(); Serial2.println("===board id 3"); interrupts();
+      //Serial2.println("===board id 3");
       //Pin mappings as per the v0.4 shield
       pinInjector1 = 8; //Output pin injector 1 is on
       pinInjector2 = 9; //Output pin injector 2 is on
@@ -1215,7 +1215,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 6:
-      //noInterrupts(); Serial2.println("===board id 6"); interrupts();
+      //Serial2.println("===board id 6");
       //Pin mappings as per the 2001-05 MX5 PNP shield
       pinInjector1 = 44; //Output pin injector 1 is on
       pinInjector2 = 46; //Output pin injector 2 is on
@@ -1267,7 +1267,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 8:
-      //noInterrupts(); Serial2.println("===board id 8"); interrupts();
+      //Serial2.println("===board id 8");
       //Pin mappings as per the 1996-97 MX5 PNP shield
       pinInjector1 = 11; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1318,7 +1318,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 9:
-      //noInterrupts(); Serial2.println("===board id 9"); interrupts();
+      //Serial2.println("===board id 9");
       //Pin mappings as per the 89-95 MX5 PNP shield
       pinInjector1 = 11; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1367,7 +1367,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 10:
-      //noInterrupts(); Serial2.println("===board id 10"); interrupts();
+      //Serial2.println("===board id 10");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings for user turtanas PCB
       pinInjector1 = 4; //Output pin injector 1 is on
@@ -1406,7 +1406,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 20:
-      //noInterrupts(); Serial2.println("===board id 20"); interrupts();
+      //Serial2.println("===board id 20");
     #if defined(CORE_AVR) && !defined(SMALL_FLASH_MODE) //No support for bluepill here anyway
       //Pin mappings as per the Plazomat In/Out shields Rev 0.1
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -1443,7 +1443,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 30:
-      //noInterrupts(); Serial2.println("===board id 30"); interrupts();
+      //Serial2.println("===board id 30");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the dazv6 shield
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -1485,7 +1485,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 40:
-      //noInterrupts(); Serial2.println("===board id 40"); interrupts();
+      //Serial2.println("===board id 40");
       //Pin mappings as per the NO2C shield
       pinInjector1 = 8; //Output pin injector 1 is on
       pinInjector2 = 9; //Output pin injector 2 is on
@@ -1527,7 +1527,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 41:
-      //noInterrupts(); Serial2.println("===board id 41"); interrupts();
+      //Serial2.println("===board id 41");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings as per the UA4C shield
       pinInjector1 = 8; //Output pin injector 1 is on
@@ -1573,7 +1573,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 45:
-      //noInterrupts(); Serial2.println("===board id 45"); interrupts();
+      //Serial2.println("===board id 45");
     #ifndef SMALL_FLASH_MODE //No support for bluepill here anyway
       //Pin mappings for the DIY-EFI CORE4 Module. This is an AVR only module
       #if defined(CORE_AVR)
@@ -1622,7 +1622,7 @@ void setPinMapping(byte boardID)
 
     #if defined(CORE_TEENSY35)
     case 50:
-      //noInterrupts(); Serial2.println("===board id 50"); interrupts();
+      //Serial2.println("===board id 50");
       //Pin mappings as per the teensy rev A shield
       pinInjector1 = 2; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1660,7 +1660,7 @@ void setPinMapping(byte boardID)
       break;
 
     case 51:
-      //noInterrupts(); Serial2.println("===board id 51"); interrupts();
+      //Serial2.println("===board id 51");
       //Pin mappings as per the teensy revB board shield
       pinInjector1 = 2; //Output pin injector 1 is on
       pinInjector2 = 10; //Output pin injector 2 is on
@@ -1696,7 +1696,7 @@ void setPinMapping(byte boardID)
     
    #if defined(STM32F4)
     case 60:
-      //noInterrupts(); Serial2.println("===board id 60"); interrupts();
+      //Serial2.println("===board id 60");
        //Pin definitions for experimental board Tjeerd 
         //Black F407VE wiki.stm32duino.com/index.php?title=STM32F407
 
@@ -1845,7 +1845,7 @@ void setPinMapping(byte boardID)
     #endif
       break;
     default:
-      ////noInterrupts(); Serial2.println("===board id default"); interrupts();
+      ////Serial2.println("===board id default");
       #if defined(STM32F4)
        //Pin definitions for experimental board Tjeerd 
         //Black F407VE wiki.stm32duino.com/index.php?title=STM32F407
@@ -2145,11 +2145,13 @@ void setPinMapping(byte boardID)
   triggerSec_pin_port = portInputRegister(digitalPinToPort(pinTrigger2));
   triggerSec_pin_mask = digitalPinToBitMask(pinTrigger2);
 
+  //Serial2.println("===pinTPS");
+  //Serial2.println(pinTPS);
 }
 
 void initialiseTriggers()
 {
-  //noInterrupts(); Serial2.print("===pinTrigger:"); Serial2.println(pinTrigger); interrupts();
+  //Serial2.print("===pinTrigger:"); Serial2.println(pinTrigger);
   byte triggerInterrupt = 0; // By default, use the first interrupt
   byte triggerInterrupt2 = 1;
 
@@ -2157,25 +2159,25 @@ void initialiseTriggers()
     switch (pinTrigger) {
       //Arduino Mega 2560 mapping
       case 2:
-        //noInterrupts(); Serial2.println("===pin trigger 2"); interrupts();
+        //Serial2.println("===pin trigger 2");
         triggerInterrupt = 0; break;
       case 3:
-        //noInterrupts(); Serial2.println("===pin trigger 3"); interrupts();
+        //Serial2.println("===pin trigger 3");
         triggerInterrupt = 1; break;
       case 18:
-        //noInterrupts(); Serial2.println("===pin trigger 18"); interrupts();
+        //Serial2.println("===pin trigger 18");
         triggerInterrupt = 5; break;
       case 19:
-        //noInterrupts(); Serial2.println("===pin trigger 19"); interrupts();
+        //Serial2.println("===pin trigger 19");
         triggerInterrupt = 4; break;
       case 20:
-        //noInterrupts(); Serial2.println("===pin trigger 20"); interrupts();
+        //Serial2.println("===pin trigger 20");
         triggerInterrupt = 3; break;
       case 21:
-        //noInterrupts(); Serial2.println("===pin trigger 21"); interrupts();
+        //Serial2.println("===pin trigger 21");
         triggerInterrupt = 2; break;
       default:
-        //noInterrupts(); Serial2.println("===pin trigger default"); interrupts();
+        //Serial2.println("===pin trigger default");
         triggerInterrupt = 0; break; //This should NEVER happen
     }
   #else
@@ -2204,7 +2206,7 @@ void initialiseTriggers()
     triggerInterrupt2 = pinTrigger2;
   #endif
 
-  //noInterrupts(); Serial2.print("===triggerInterrupt:"); Serial2.println(triggerInterrupt); interrupts();
+  //Serial2.print("===triggerInterrupt:"); Serial2.println(triggerInterrupt);
 
   pinMode(pinTrigger, INPUT);
   pinMode(pinTrigger2, INPUT);
@@ -2217,12 +2219,12 @@ void initialiseTriggers()
   secondaryTriggerEdge = 0; //This is optional and may not be changed below, depending on the decoder in use
 
   //Set the trigger function based on the decoder in the config
-  //noInterrupts(); Serial2.print("===IT2 TrigSpeed:"); Serial2.println(configPage4.TrigSpeed, HEX); interrupts();
-  //noInterrupts(); Serial2.print("===IT3 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX); interrupts();
+  //Serial2.print("===IT2 TrigSpeed:"); Serial2.println(configPage4.TrigSpeed, HEX);
+  //Serial2.print("===IT3 TrigPattern:"); Serial2.println(configPage4.TrigPattern, HEX);
   switch (configPage4.TrigPattern)
   {
     case 0:
-      //noInterrupts(); Serial2.println("===IT4 TrigPattern 0"); interrupts();
+      //Serial2.println("===IT4 TrigPattern 0");
       //Missing tooth decoder
       triggerSetup_missingTooth();
       triggerHandler = triggerPri_missingTooth;
@@ -2249,7 +2251,7 @@ void initialiseTriggers()
       break;
 
     case 1:
-      //noInterrupts(); Serial2.println("===IT4 TrigPattern 1"); interrupts();
+      //Serial2.println("===IT4 TrigPattern 1");
       // Basic distributor
       triggerSetup_BasicDistributor();
       triggerHandler = triggerPri_BasicDistributor;
@@ -2264,7 +2266,7 @@ void initialiseTriggers()
       break;
 
     case 2:
-      //noInterrupts(); Serial2.println("===IT4 TrigPattern 2"); interrupts();
+      //Serial2.println("===IT4 TrigPattern 2");
       triggerSetup_DualWheel();
       triggerHandler = triggerPri_DualWheel;
       triggerSecondaryHandler = triggerSec_DualWheel;
@@ -2283,7 +2285,7 @@ void initialiseTriggers()
       break;
 
     case 3:
-      //noInterrupts(); Serial2.println("===IT4 TrigPattern 3"); interrupts();
+      //Serial2.println("===IT4 TrigPattern 3");
       triggerSetup_GM7X();
       triggerHandler = triggerPri_GM7X;
       getRPM = getRPM_GM7X;
