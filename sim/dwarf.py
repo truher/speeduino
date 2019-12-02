@@ -8,28 +8,29 @@ from elftools.dwarf.locationlists import (LocationEntry, LocationExpr, LocationP
 from elftools.dwarf.dwarf_expr import (GenericExprVisitor, DW_OP_opcode2name)
 import struct
 import binascii
+import memory
 
-# represents the memory of the device
-class Memory():
-    def get(self,addr):      # int
-        raise NotImplementedError()
-    def set(self,addr,val):  # int
-        raise NotImplementedError()
-
-# internal python, for testing and maybe page flipping?
-# the cpp equivalent has another wrapper (one per byte) with a hook for tracing
-# and it pre-initializes the whole range
-class DictMemory(Memory):
-    def __init__(self):
-        self.rw = {}
-    def get(self, addr):      # int
-        if addr not in self.rw:
-            return 0
-        return self.rw[addr]
-    def set(self, addr, val): # int
-        if not isinstance(val, int):
-            raise ValueError("wrong value type: %s " % type(val))
-        self.rw[addr] = val
+## represents the memory of the device
+#class Memory():
+#    def get(self,addr):      # int
+#        raise NotImplementedError()
+#    def set(self,addr,val):  # int
+#        raise NotImplementedError()
+#
+## internal python, for testing and maybe page flipping?
+## the cpp equivalent has another wrapper (one per byte) with a hook for tracing
+## and it pre-initializes the whole range
+#class DictMemory(Memory):
+#    def __init__(self):
+#        self.rw = {}
+#    def get(self, addr):      # int
+#        if addr not in self.rw:
+#            return 0
+#        return self.rw[addr]
+#    def set(self, addr, val): # int
+#        if not isinstance(val, int):
+#            raise ValueError("wrong value type: %s " % type(val))
+#        self.rw[addr] = val
 
 # this visitor thing is how you get at the decoder
 class OpVal(GenericExprVisitor):
@@ -131,11 +132,13 @@ class Array(Variable):
         raise ValueException("no upper bound")
 
     def size(self):
-        type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
-        for die in type_die.iter_children():
-            if die.tag == 'DW_TAG_subrange_type':
-                return die.attributes['DW_AT_upper_bound'].value + 1
-        raise ValueError("could not find upper bound")
+        return self.upper_bound() + 1
+
+#        type_die = self.dwarf.resolveType(self.var_die.cu.get_top_DIE(), self.var_die)
+#        for die in type_die.iter_children():
+#            if die.tag == 'DW_TAG_subrange_type':
+#                return die.attributes['DW_AT_upper_bound'].value + 1
+#        raise ValueError("could not find upper bound")
 
     def location(self):
         parent_location = 0 if self.parent is None else self.parent.location()
