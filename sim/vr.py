@@ -24,7 +24,7 @@ class VrPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         posFloor = int(pos)
         self.state = self.states[posFloor]
         self.SetPin(self.state)
-        self.printDebug(posFloor)
+        #self.printDebug(posFloor)
         remainingDegrees = (pos + 1 - posFloor) * 720 / len(self.states)
         remainingNs = remainingDegrees * self.crank.nsecPerDegree
         return int(remainingNs)

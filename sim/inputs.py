@@ -17,11 +17,13 @@ class InputPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         self.name = name
 
     def DoStep(self, trueHwStep):
-        cur = self.GetAnalogValue(5.0)
-        cur += 0.1 * random.random() - 0.05
-        #print(cur)
+        cur = self.GetAnalogValue(5.0) # supplying vcc here is lame
         # random walk
+        cur += 0.1 * random.random() - 0.05
+        #cur = 4.0 * random.random() + 0.5
+        #cur = (cur + 0.1) % 5.0
+        #print(cur)
         self.SetAnalogValue(cur)
-        print "time %d input %s input %f" % (self.sc.GetCurrentTime(), self.name, cur)
-        return 1000000  # 1 ms
+        #print "time %d input %s input %f" % (self.sc.GetCurrentTime(), self.name, cur)
+        return 10000000  # 10 ms
         #return 10**9

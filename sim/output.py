@@ -19,4 +19,4 @@ class OutputPin(pysimulavr.Pin):
     def SetInState(self, pin):
         pysimulavr.Pin.SetInState(self, pin)
         self.state = pin.outState
-        print "time %d output %s state %s" % (self.sc.GetCurrentTime(), self.name, self.state)
+        #print "time %d output %s state %s" % (self.sc.GetCurrentTime(), self.name, self.state)
