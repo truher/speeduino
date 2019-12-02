@@ -1,22 +1,10 @@
-import unittest
+import sys
+sys.path.append("../..")
 import dwarf
-import pysimulavr
-import ctypes
+import memory
 
-class SimMemory(dwarf.Memory):
-    def __init__(self, dev):
-        self.dev = dev
-    def get(self, addr):
-        foo = self.dev.GetRWMem(addr)
-        val = self.dev.GetRWMem(addr)
-        if not isinstance(val, int):
-            raise ValueError("wrong value type: %s " % type(val))
-        return val
-    def set(self, addr, val):
-        if not isinstance(val, int):
-            raise ValueError("wrong value type: %s " % type(val))
-        val = ctypes.c_ubyte(ord(val)).value
-        self.dev.SetRWMem(addr, val)
+import unittest
+import pysimulavr
 
 class TypesTest(unittest.TestCase):
 
@@ -24,10 +12,10 @@ class TypesTest(unittest.TestCase):
         self.assertTrue(True)
 
     def testNonExistent(self):
-        mem = dwarf.DictMemory()
+        mem = memory.DictMemory()
         variables = dwarf.Globals(mem,
-            'test/types.elf',
-            'test/types.ino.cpp')
+            'types.elf',
+            'src/types.ino.cpp')
         with self.assertRaises(ValueError):
             variables.variable("nonexistent variable")
 
@@ -133,10 +121,10 @@ class TypesTest(unittest.TestCase):
 
     # check initial values without running the code
     def testDwarf(self):
-        mem = dwarf.DictMemory()
+        mem = memory.DictMemory()
         variables = dwarf.Globals(mem,
-            'test/types.elf',
-            'test/types.ino.cpp')
+            'types.elf',
+            'src/types.ino.cpp')
 
         self.checkPrimitiveWriteReadback(variables, 'v1', 2, 1, 648, True) # bool => bool
         self.checkPrimitiveWriteReadback(variables, 'v2', 2, 1, 647, True) # bool => bool
@@ -224,8 +212,8 @@ class TypesTest(unittest.TestCase):
 
 
     def testSim(self):
-        filename = 'test/types.elf'
-        cu_name = 'test/types.ino.cpp'
+        filename = 'types.elf'
+        cu_name = 'src/types.ino.cpp'
         proc = "atmega2560"
         speed = 16000000
         sc = pysimulavr.SystemClock.Instance()
@@ -238,7 +226,7 @@ class TypesTest(unittest.TestCase):
         sc.Add(dev)
         sc.RunTimeRange(speed)
 
-        mem = SimMemory(dev)
+        mem = memory.SimMemory(dev)
         variables = dwarf.Globals(mem, filename, cu_name)
 
         self.checkPrimitiveRead(variables, 'v1', 2, 1, 648, True) # bool => bool
@@ -300,8 +288,8 @@ class TypesTest(unittest.TestCase):
         self.assertEqual(240, dwarf.Primitive.mask(1,4,0))  # f0 = 240
 
     def testSimAddrs(self):
-        filename = 'test/types.elf'
-        cu_name = 'test/types.ino.cpp'
+        filename = 'types.elf'
+        cu_name = 'src/types.ino.cpp'
         proc = "atmega2560"
         speed = 16000000
         sc = pysimulavr.SystemClock.Instance() # a fucking singleton
@@ -347,7 +335,7 @@ class TypesTest(unittest.TestCase):
 
         sc.RunTimeRange(speed)
 
-        mem = SimMemory(dev)
+        mem = memory.SimMemory(dev)
         variables = dwarf.Globals(mem, filename, cu_name)
 
         self.assertEqual(int('0x01',16), mem.get(648))  # av1 bool
