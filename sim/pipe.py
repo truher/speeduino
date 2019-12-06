@@ -10,6 +10,8 @@
 import sys, os, pty, select, fcntl, termios
 import pysimulavr
 import binascii
+import datetime
+
 
 class Pipe(pysimulavr.PySimulationMember):
     def __init__(self, port, speed, rxpin, txpin):
@@ -19,6 +21,9 @@ class Pipe(pysimulavr.PySimulationMember):
         self.delay = speed/1000
         self.txpin = txpin
         self.rxpin = rxpin
+        self.dumpfile = open('pipe.dump', 'wb')
+        self.dumpfile.write("START PIPE DUMP\n")
+        self.dumpfile.flush()
 
     def __del__(self):
         os.unlink(self.ptyname)
@@ -30,8 +35,7 @@ class Pipe(pysimulavr.PySimulationMember):
         except os.error:
             pass
         os.symlink(os.ttyname(sfd), self.ptyname)
-        fcntl.fcntl(mfd, fcntl.F_SETFL
-                    , fcntl.fcntl(mfd, fcntl.F_GETFL) | os.O_NONBLOCK)
+        fcntl.fcntl(mfd, fcntl.F_SETFL, fcntl.fcntl(mfd, fcntl.F_GETFL) | os.O_NONBLOCK)
         old = termios.tcgetattr(mfd)
         old[3] = old[3] & ~termios.ECHO
         termios.tcsetattr(mfd, termios.TCSADRAIN, old)
@@ -45,6 +49,8 @@ class Pipe(pysimulavr.PySimulationMember):
             #sys.stdout.write(d)
             #sys.stdout.flush()
             os.write(self.fd, d)
+            self.dumpfile.write("RX %s %s\n" % (str(datetime.datetime.now()), binascii.hexlify(d)))
+            self.dumpfile.flush()
 
         # pipe "tx" is avr "rx"
         res = select.select([self.fd], [], [], 0)
@@ -54,4 +60,6 @@ class Pipe(pysimulavr.PySimulationMember):
             #sys.stdout.write(' ')
             #sys.stdout.flush()
             self.txpin.pushChars(d)
+            self.dumpfile.write("TX %s %s\n" % (str(datetime.datetime.now()), binascii.hexlify(d)))
+            self.dumpfile.flush()
         return self.delay
