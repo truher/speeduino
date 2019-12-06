@@ -27,7 +27,7 @@ class SimMemory(Memory):
     def __init__(self, dev):
         self.dev = dev
     def get(self, addr):
-        if addr < 0 or addr > 65535:
+        if addr < 0 or addr > 8703: # mega2560 has 8k of ram
             raise ValueError("addr out of bounds: %d" % addr)
         #print "get addr %d" % addr
         val = self.dev.GetRWMem(addr)
@@ -36,6 +36,8 @@ class SimMemory(Memory):
             raise ValueError("wrong value type: %s " % type(val))
         return val
     def set(self, addr, val):
+        if addr < 0 or addr > 8703: # mega2560 has 8k of ram
+            raise ValueError("addr out of bounds: %d" % addr)
         if not isinstance(val, int):
             raise ValueError("wrong value type: %s " % type(val))
         #print "set addr %d val %d" % (addr, val)
