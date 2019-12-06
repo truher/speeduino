@@ -8,6 +8,8 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 
 import pysimulavr, sys
+import binascii
+import datetime
 
 SERIALBITS = 10 # 8N1 = 1 start, 8 data, 1 stop
 
@@ -55,7 +57,7 @@ class DebugSerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
 
 # Class to read serial data from AVR serial transmit pin.
 class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
-    def __init__(self, baud):
+    def __init__(self, baud, dumpfile):
         pysimulavr.Pin.__init__(self)
         pysimulavr.PySimulationMember.__init__(self)
         self.sc = pysimulavr.SystemClock.Instance()
@@ -63,6 +65,9 @@ class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         self.current = 0
         self.pos = -1
         self.queue = ""
+        self.dumpfile = dumpfile
+        self.dumpfile.write("START SERIAL RX DUMP\n")
+        self.dumpfile.flush()
 
     # overrides Pin.SetInState()
     def SetInState(self, pin):
@@ -80,7 +85,12 @@ class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         if self.pos == 1:
             return int(self.delay * 1.5)
         if self.pos >= SERIALBITS:
-            self.queue += chr((self.current >> 1) & 0xff)
+            newchr = chr((self.current >> 1) & 0xff)
+            self.queue += newchr
+
+            self.dumpfile.write("RX %s %d %s\n" % (str(datetime.datetime.now()), self.sc.GetCurrentTime(), binascii.hexlify(newchr)))
+            self.dumpfile.flush()
+
             self.pos = -1
             self.current = 0
             return -1  # this means "don't call anymore"
@@ -93,7 +103,7 @@ class SerialRxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
 
 # Class to send serial data to AVR serial receive pin.
 class SerialTxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
-    def __init__(self, baud):
+    def __init__(self, baud, dumpfile):
         pysimulavr.Pin.__init__(self)
         pysimulavr.PySimulationMember.__init__(self)
         self.SetPin('H')
@@ -102,12 +112,18 @@ class SerialTxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
         self.current = 0
         self.pos = 0
         self.queue = ""
+        self.dumpfile = dumpfile
+        self.dumpfile.write("START SERIAL RX DUMP\n")
+        self.dumpfile.flush()
 
     # overrides PySimulationMember.DoStep()
     def DoStep(self, trueHwStep):
         if not self.pos:
             if not self.queue:
                 return -1  # this means "don't call anymore"
+            newchr = self.queue[0]
+            self.dumpfile.write("TX %s %s\n" % (str(datetime.datetime.now()), binascii.hexlify(newchr)))
+            self.dumpfile.flush()
             self.current = (ord(self.queue[0]) << 1) | 0x200
             self.queue = self.queue[1:]
         newstate = 'L'
