@@ -54,7 +54,7 @@ void initialiseAll()
     initialiseTimers();
 
 
-    Serial.begin(115200);
+    Serial.begin(1000000);
     Serial2.begin(115200);  // for debug
 
 
