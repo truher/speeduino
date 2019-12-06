@@ -18,6 +18,8 @@ import binascii
 import dwarf
 import memory
 
+import datetime
+
 CALIBRATION_TABLE_SIZE = 512
 EEPROM_CALIBRATION_O2 = 2559
 EEPROM_CALIBRATION_IAT = 3071
@@ -36,6 +38,21 @@ def dumpEeprom(dev, start, end):
         test_str = chr(dev.eeprom.ReadFromAddress(ost))
         print "eeprom: %d: %s" % (ost, ''.join(format(ord(i), '08b') for i in test_str))
         sys.stdout.flush()
+
+def writeEntireEeprom(dev, filename):
+    size = dev.eeprom.GetSize()
+    with open(filename, 'wb') as f:
+        for index in range(0, size):
+            f.write(chr(dev.eeprom.ReadFromAddress(index)))
+
+def readEntireEeprom(dev, filename):
+    index = 0
+    with open(filename, 'rb') as f:
+        b = f.read(1)
+        while b != "":
+            dev.eeprom.WriteAtAddress(index, ord(b[0]))
+            index += 1
+            b = f.read(1)
 
 def dumpRAM(mem, start, end):
     for index in range(start, end):
@@ -108,8 +125,10 @@ def writeDefaults(variables):
     configPage2 = variables.variable('configPage2')
     configPage2.member('pinMapping').write(3)  # for the 0.4 shield.
     configPage2.member('mapSample').write(0)  # instantaneous
+    configPage2.member('nCylinders').write(4)  # instantaneous
     configPage2.member('tpsMin').write(0)
     configPage2.member('tpsMax').write(255)
+    configPage2.member('stoich').write(147)
     configPage2.member('mapMin').write(0)
     configPage2.member('mapMax').write(255)
     #configPage2.member('pinMapping').write(41)  # for the UA4C
@@ -185,9 +204,16 @@ def populateCalibrationTables(variables):
     populateOneCalibrationTable(variables, 'o2CalibrationTable')
 
 def printOneCalibrationTable(variables, name):
+    print "CALIBRATION TABLE %s" % name
     arrayVar = variables.variable(name)
+    index = 0
     for x in range(0, CALIBRATION_TABLE_SIZE):
-        print "%20s %3d: %3d" % (name, x, arrayVar.get(x).read())
+        #sys.stdout.write("%xs %3d: %3d" % (name, x, arrayVar.get(x).read())
+        sys.stdout.write("%02x" % arrayVar.get(x).read())
+        index += 1
+        if index % 32 == 0:
+            sys.stdout.write("\n")
+    sys.stdout.write("\n")
 
 def printCalibrationTables(variables):
     printOneCalibrationTable(variables, 'cltCalibrationTable')
@@ -200,13 +226,18 @@ def printConfig(variables):
     configPage2 = variables.variable('configPage2')
     vars = [
             'reqFuel',
+            'divider',
             'multiplyMAP',
             'injOpen',
             'mapSample',
+            'nCylinders',
+            'injLayout',
+            'dutyLim',
             'tpsMin',
             'tpsMax',
             'mapMin',
-            'mapMax'
+            'mapMax',
+            'stoich'
             ]
     for var in vars:
         printMemberVal(configPage2, var)
@@ -228,7 +259,7 @@ def printConfig(variables):
             ]
     for var in vars:
         printMemberVal(configPage4, var)
-    print "========================= CONFIG4 ========================="
+    print "========================= CONFIG6 ========================="
     sys.stdout.flush()
     configPage6 = variables.variable('configPage6')
     vars = [ 'egoType'
@@ -278,7 +309,9 @@ def printStatus(variables):
              "egoCorrection",
              "runSecs", "secl",
              "loopsPerSecond",
-             "freeRAM"
+             "freeRAM",
+             "nSquirts", # TS freaks out if this is zero
+             "nChannels",
             ]
     for var in vars:
         printMemberVal(currentStatus, var)
@@ -326,6 +359,10 @@ def printDebugStream(pin):
     pin.ClearBuffer()
 
 def main():
+    #d = 'hello'
+    #dumpfile = open('pipe.dump', 'wb')
+    #dumpfile.write("RX %s %s" % (str(datetime.datetime.now()), binascii.hexlify(d)))
+    #dumpfile.flush()
     usage = "%prog [options] <program.elf>"
     opts = optparse.OptionParser(usage)
     #opts.add_option("-p", "--port", type="string", dest="port",
@@ -335,6 +372,7 @@ def main():
     if len(args) != 1:
         opts.error("Incorrect number of arguments")
     filename = args[0]
+    eeprom_filename = 'eeprom.dump'
     ptyname = '/tmp/pseudoserial' # options.port
     proc = "atmega2560"
     speed = 16000000
@@ -342,14 +380,20 @@ def main():
     # flag, which isn't supported by simulavr, so to work around it, i set the baud rate
     # here to be half of the simulator baud rate, and it seems to work.
     # see also https://github.com/Traumflug/simulavr/issues/4
-    baud = 57600 
+    #baud = 57600 
+    # the new thing goes faster
+    # baud = osc / (16) = 1M
+    baud = speed/16 
     
     # System clock
     sc = pysimulavr.SystemClock.Instance()
     pysimulavr.DumpManager.Instance().SetSingleDeviceApp()
 
     # AVR device
-    dev = pysimulavr.AvrFactory.instance().makeDevice(proc)
+    #hwusart_factory = pysimulavr.HWUsartFactory()
+    hwusart_factory = pysimulavr.HWUsartFactory('/tmp/tty')
+    dev = pysimulavr.AvrDevice_atmega2560(hwusart_factory)
+    #dev = pysimulavr.AvrFactory.instance().makeDevice(proc)
     dev.Load(filename)
     dev.SetClockFreq(10**9 / speed)
     sc.Add(dev)
@@ -387,29 +431,34 @@ def main():
     # RX pin, i.e. what avr thinks "TX" is
     # it adds and removes itself from the sim stepper
     # 1 = PE1
-    rxpin = SerialRxPin(baud)
-    netD1 = pysimulavr.Net()
-    netD1.Add(rxpin)
-    netD1.Add(dev.GetPin("E1"))
+    # use the hardware for this now
+    # serialdumpfile = open('serial.dump','wb')
+    # rxpin = SerialRxPin(baud, serialdumpfile)
+    # netD1 = pysimulavr.Net()
+    # netD1.Add(rxpin)
+    # netD1.Add(dev.GetPin("E1"))
 
     # TX pin, i.e. what avr thinks "RX" is
     # it adds and removes itself from the sim stepper
     # D0 = PE0
-    txpin = SerialTxPin(baud)
-    netD0 = pysimulavr.Net()
-    netD0.Add(txpin)
-    netD0.Add(dev.GetPin("E0"))
+    # use the hardware for this now
+    # txpin = SerialTxPin(baud, serialdumpfile)
+    # netD0 = pysimulavr.Net()
+    # netD0.Add(txpin)
+    # netD0.Add(dev.GetPin("E0"))
 
     # Named pipe for TunerStudio
-    pipe = Pipe(ptyname, speed, rxpin, txpin)
+    # replaced with the HWUart thing
+    # pipe = Pipe(ptyname, speed, rxpin, txpin)
     # runs all the time
-    sc.Add(pipe)
+    # sc.Add(pipe)
 
     # serial2 for debugging, also on arduino not schematic
     # (also D17 = PH0 TODO: hook up the tx pin)
 
     # 16 = PH1
-    rxpin2 = DebugSerialRxPin(baud)
+    #rxpin2 = DebugSerialRxPin(baud)
+    rxpin2 = DebugSerialRxPin(57600)
     netH1 = pysimulavr.Net()
     netH1.Add(rxpin2)
     netH1.Add(dev.GetPin("H1"))
@@ -419,7 +468,8 @@ def main():
     print "DATA VERSION %d" % dev.eeprom.ReadFromAddress(0)
     # ============ simulated engine parts: ============
     # crank models engine revolutions
-    crank = Crank(1000, 1)
+    crank = Crank(2000, 1)
+    #crank = Crank(1, 1)
     # runs all the time
     sc.Add(crank)
     
@@ -593,7 +643,7 @@ def main():
     print "S0 write"
     sys.stdout.flush()
 
-    writeDefaults(variables)
+    #writeDefaults(variables)
 
     print "S0 initialized"
 
@@ -603,12 +653,14 @@ def main():
     print "S0 now what's in ram"
     sys.stdout.flush()
     dumpRAM(mem, configPage4.location(), configPage4.location() + 10)
+    print "S0 first load the eprom"
+    readEntireEeprom(dev, eeprom_filename)
     print "S0 what's in eeprom before writing?"
     sys.stdout.flush()
     dumpEeprom(dev, EEPROM_CONFIG4_START, EEPROM_CONFIG4_START + 10)
     print "S0 write to eeprom"
     sys.stdout.flush()
-    writeConfigToEeprom(variables, mem, dev)
+    #writeConfigToEeprom(variables, mem, dev)
     sys.stdout.flush()
     print "S0 done with eeprom write"
     print "S0 now what's in eeprom"
@@ -618,7 +670,7 @@ def main():
     print "S0 done"
     print "now zero the RAM to see if loadConfig works"
     sys.stdout.flush()
-    writeZeros(variables)
+    #writeZeros(variables)
     print "check the zeros"
     sys.stdout.flush()
     printConfig(variables)
@@ -631,6 +683,8 @@ def main():
 
     for cy in range(100):
         print "================================= RUN CYCLE %d =================================" % cy 
+        print "NOW %s" % str(datetime.datetime.now())
+        writeEntireEeprom(dev, eeprom_filename)
 
         # try setting stuff here?
 
@@ -641,7 +695,9 @@ def main():
 
         # clt/iat/o2/bat are read at 4hz
 
+        print "RUN %s" % str(datetime.datetime.now())
         sc.RunTimeRange(speed*1000)
+        print "DONE %s" % str(datetime.datetime.now())
         printDebugStream(rxpin2)
         print "time %f" % (sc.GetCurrentTime() / 10**9)  # ns -> sec
         print "crank angle: %d crank: %s cam: %s" % (
