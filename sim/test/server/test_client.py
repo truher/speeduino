@@ -11,6 +11,8 @@ class Client:
         self.epoll.register(self.mfd, select.EPOLLIN)
 
     def __del__(self):
+        self.epoll.unregister(self.mfd)
+        self.epoll.close()
         os.unlink(self.ptyname)
 
     def makePty(self):
