@@ -5,7 +5,7 @@ import codec
 import messages
 
 import unittest
-import pysimulavr
+#import pysimulavr
 import test_client
 import server
 import time
